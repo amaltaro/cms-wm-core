@@ -17,6 +17,7 @@ uv run ruff check .
 ```
 
 Supported Python: 3.10+ (local default pinned in `.python-version`).
+CI runs unit tests on 3.10–3.14 (see `.github/workflows/ci.yml`).
 
 ## Commit messages
 
