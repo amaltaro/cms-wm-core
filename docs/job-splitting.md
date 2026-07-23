@@ -32,6 +32,70 @@ Out of scope for the core algorithms:
 Data placement is normally performed at **container** or **dataset (block)**
 level, but file-level placement will be added in the future system.
 
+### File metadata: run / lumi / events
+
+Below the file, CMS data is further described by luminosity sections. For
+job splitting, each file may carry a list of triples:
+
+| Field | Meaning |
+| --- | --- |
+| Run number | CMS run |
+| Luminosity section number | Lumi within that run |
+| Event count | Events in that run/lumi for this file |
+
+Not every algorithm needs this map (e.g. pure FileBased may only use file
+totals). Lumi- and event-aware algorithms do.
+
+**Scale warning:** a single file can have on the order of **tens of
+thousands** of lumis. The run/lumi table is therefore a demanding structure
+and a major contributor to **workload-management** process memory. Design
+implications:
+
+- Keep the representation compact (e.g. small immutable records / tuples)
+- Do not duplicate the full map per job when a mask / index range suffices
+- Load or pass run/lumi data only when the chosen algorithm requires it
+- Prefer streaming or views over deep copies when adapting from WMBS/DBS
+
+In code, this is modeled as `RunLumiEvents` on `SplitFile.run_lumis`
+(`types.py`).
+
+## Scale and process memory
+
+Two different “memory” topics appear in this design; do not confuse them:
+
+| Topic | Where it runs | Meaning | In splitter scope? |
+| --- | --- | --- | --- |
+| Grid-job application memory | **Worker node** executing one job | RSS as the payload processes its assigned data | **No** (not a packing budget) |
+| Workload-management memory | **WM service** turning workflows into jobs | RAM while ingesting high-level requests and emitting many jobs | **Yes** (stability constraint) |
+
+The scale risk called out here is **not** about worker nodes. It is about the
+workload management component (agent, orchestrator, DiracX service, …) that
+accepts workflow-level requests and breaks them into processing units (grid
+jobs). Large workflows can generate **tens of thousands of jobs** in one
+logical split; if that component holds full run/lumi maps and the entire job
+list in memory, it can become unstable.
+
+A robust memory strategy is therefore required **on the WM side**: peak
+memory should stay bounded (or grow only weakly), not scale linearly with
+workflow size or total jobs produced.
+
+Direction of travel (API may evolve; early code may still materialize results
+for clarity):
+
+1. **Bounded inputs** — pre-scoped units; avoid loading unused run/lumi maps
+2. **Compact structures** — prefer tuples/arrays over heavy objects; share
+   file metadata by reference where safe
+3. **Streaming / chunked output** — emit jobs via iterator or fixed-size
+   batches so WM peak memory does not track total job count
+4. **Drain as you go** — persist or enqueue each chunk (WMBS, DiracX, …)
+   instead of accumulating the full result in the splitter process
+
+Determinism still applies under streaming: for the same input, the sequence
+of emitted jobs must be identical.
+
+Current `SplitResult` is an in-memory snapshot suitable for unit tests and
+small runs; treat it as provisional for large production workflows.
+
 ## Core invariant: pre-scoped input
 
 **Job splitting assumes its input file list is already a locality- and
@@ -91,17 +155,23 @@ comparison across refactors.
 | Load run–lumi maps, parentage, ACDC whitelists | Caller (pass **data**, not clients) |
 | Pack files into jobs using packing rules and resource budgets | **Job splitting algorithms** |
 | Persist jobs, apply generators, map sites | Caller / WMAgent-style adapters |
-| Application memory footprint | Outside splitting (workflow / runtime) |
+| WM process memory under large workflows | WM component + splitter API (streaming/chunking) |
+| Worker-node application RSS | Outside splitting (payload / runtime) |
 
-### Memory is out of scope for splitting
+### Worker application memory is out of scope for packing
 
-Memory requirements are **not** part of the job-splitting contract. Ideally,
-an application’s memory footprint does not grow with the amount of data
-assigned to a job; packing more events/files should not be gated on RSS.
+Worker-node **application memory** (RSS of the grid job) is **not** part of
+the job-splitting budget. Ideally, an application’s footprint does not grow
+with the amount of data assigned to one job; packing more events/files should
+not be gated on RSS.
+
+That is separate from **workload-management process memory**, which *is* a
+stability concern when workflows expand into very large run/lumi maps and job
+counts (see Scale and process memory above).
 
 Upstream WMCore attaches `memoryRequirement` / `estimatedMemory` to jobs for
-matchmaking. In this library, memory stays with the caller or submitter
-adapter if needed — not as a splitter rate, target, or close condition.
+matchmaking. In this library, that stays with the caller or submitter adapter
+if needed — not as a splitter rate, target, or close condition.
 
 ## When to close job A and open job B
 
@@ -227,15 +297,25 @@ Resource rates, targets, and maxima are **inputs** (or derived from file
 metadata for input size). Calibration of processing and output rates stays
 outside the splitter.
 
+## Code sketch (interface)
+
+Under `src/cms_wm_core/job_splitting/`:
+
+| Module | Role |
+| --- | --- |
+| `types.py` | Dataclasses only: files, run/lumi triples, rates, budgets, jobs, results |
+| `base.py` | `JobSplitter` ABC — subclasses must implement `name` and `split` |
+| per-algorithm modules | Own `*Request` dataclass + `JobSplitter[ThatRequest]` |
+
+`typing.Protocol` / duck typing is intentionally avoided so each field has an
+explicit dataclass type. See `_example.py` for a tiny illustrative subclass.
+
 ## Input / output contract (sketch)
 
-Names are indicative; concrete types will land with the first implementation.
-
-**Each algorithm may require a different subset of inputs.** The lists below
-are a shared vocabulary, not a single mandatory struct for every splitter.
-Per-algorithm docs (and type hints) must state which fields are required,
-optional, or unused. Callers must not assume FileBased and EventAwareLumiBased
-consume the same data.
+**Each algorithm may require a different subset of inputs.** Shared types in
+`types.py` are a vocabulary; each algorithm adds a request dataclass.
+Callers must not assume FileBased and EventAwareLumiBased consume the same
+request.
 
 ### Input — file (common fields; algorithms vary)
 
@@ -243,7 +323,8 @@ Typical fields (not all required for every algorithm):
 
 - `lfn`, `events`, `size`, `first_event`
 - `locations` / locality hints (optional; network vs local read)
-- `runs` / lumis (and events-per-lumi when the algorithm needs them)
+- `run_lumis`: list of `(run, lumi, events)` — can be very large; omit when
+  unused
 - optional `parents` (LFNs already attached)
 
 No required Rucio container/dataset fields on the core input.
