@@ -305,10 +305,11 @@ Under `src/cms_wm_core/job_splitting/`:
 | --- | --- |
 | `types.py` | Dataclasses only: files, run/lumi triples, rates, budgets, jobs, results |
 | `base.py` | `JobSplitter` ABC — subclasses must implement `name` and `split` |
-| per-algorithm modules | Own `*Request` dataclass + `JobSplitter[ThatRequest]` |
+| `file_based.py` | FileBased v1 + `FileBasedRequest` |
+| further algorithms | Own `*Request` dataclass + `JobSplitter[ThatRequest]` |
 
 `typing.Protocol` / duck typing is intentionally avoided so each field has an
-explicit dataclass type. See `_example.py` for a tiny illustrative subclass.
+explicit dataclass type.
 
 ## Input / output contract (sketch)
 
@@ -344,25 +345,65 @@ No required Rucio container/dataset fields on the core input.
 
 ### Output
 
-- Job groups (stable order; deterministic for the given inputs)
-- Each job: ordered input LFNs, mask, **resource estimates**:
+- Ordered jobs (deterministic for the given inputs); stored as an immutable
+  tuple on ``SplitResult.jobs``
+- Each job: ordered input LFNs, mask (when applicable), **resource estimates**:
   - wall time
   - scratch disk (from transient output, ± TBD input staging)
   - persisted / stage-out volume
-  - network (from input size when remote read applies)
+  - network (from input file sizes when remote read applies)
 - optional creation-failure / unsplittable marker and reason
 - small baggage dict if needed
 
 No memory estimate from the splitter.
 
+## FileBased (v1 scope)
+
+Upstream:
+[WMCore FileBased](https://github.com/dmwm/WMCore/blob/master/src/python/WMCore/JobSplitting/FileBased.py).
+
+FileBased packs whole files into jobs. It is the first algorithm to extract.
+
+### What drives splitting
+
+- **`files_per_job`** — soft/primary packing target: close the current job and
+  start a new one when this many files have been assigned
+- **Per-file `events`** — required on each input file so resource estimates
+  can be computed (`n_events × rates`)
+- Optional **resource targets/maxima** and size/time rates — same shared
+  budget model as the rest of this design (estimates always; hard closes /
+  unsplittable flags as we wire them in)
+
+### Explicitly out of scope for FileBased
+
+| Upstream / idea | Decision |
+| --- | --- |
+| Location bucketing (`sortByLocation`) | **Omit.** Caller must pass a file list that is already location-consistent. Site/locality belongs closer to **job execution** than to job definition in WM. |
+| Run / lumi masks and run boundaries | **Omit.** If run/lumi constraints matter, use a lumi-aware algorithm — not FileBased. |
+| `jobs_per_group` | **Omit.** Packaging/scalability concern for persistence, not packing math. |
+| `include_parents` / parent LFN resolution | **Omit for now.** Document as deferred in the module docstring (needed historically when processing files with parents). |
+| Memory requirement on jobs | **Omit** (not a packing input; see above). |
+
+### Input / output (FileBased-specific)
+
+**Input files:** required `lfn`, `events`, and `size` (size feeds the network
+estimate). `run_lumis` and `locations` are ignored if present.
+
+**Input request:** `files_per_job`, file tuple, `ResourceRates`, optional
+`ResourceBudgets`.
+
+**Output:** ordered ``SplitResult.jobs`` (LFN-sorted packing). Deterministic for
+the same input.
+
 ## Planned extract order
 
-1. **FileBased** — clearest packing; characterization tests first
-2. **EventBased** — establishes mask semantics
-3. **LumiBased**, then **EventAwareLumiBased** — production processing path
+1. **FileBased** — v1 scope above; characterization tests first
+2. **EventBased** — establishes mask / event-boundary semantics
+3. **LumiBased**, then **EventAwareLumiBased** — when run/lumi constraints
+   are required
 
 Defer: merge/sibling/Harvest splitters, WorkQueue start policies, T0-specific
-algorithms.
+algorithms, FileBased parentage and `jobs_per_group`.
 
 ## Provenance
 
