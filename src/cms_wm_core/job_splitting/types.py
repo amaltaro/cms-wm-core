@@ -29,7 +29,7 @@ class SplitFile:
 
     lfn: str
     events: int
-    size: int = 0
+    size: int
     first_event: int = 0
     # Optional locality hints; empty means "unspecified".
     locations: frozenset[str] = field(default_factory=frozenset)
@@ -86,7 +86,7 @@ class SplitJob:
 
 @dataclass(frozen=True)
 class SplitResult:
-    """Full splitter output: ordered job groups, each an ordered list of jobs.
+    """Full splitter output: an ordered sequence of jobs.
 
     This in-memory shape is fine for early algorithms and tests. Large
     workflows can yield tens of thousands of jobs on the **workload
@@ -94,4 +94,4 @@ class SplitResult:
     process memory stays bounded (see design doc).
     """
 
-    job_groups: tuple[tuple[SplitJob, ...], ...]
+    jobs: tuple[SplitJob, ...]
