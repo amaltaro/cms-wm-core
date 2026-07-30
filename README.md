@@ -1,5 +1,8 @@
 # cms-wm-core
 
+[![CI](https://github.com/amaltaro/cms-wm-core/actions/workflows/ci.yml/badge.svg)](https://github.com/amaltaro/cms-wm-core/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://github.com/amaltaro/cms-wm-core/blob/main/.github/workflows/ci.yml)
+
 Core libraries for the future CMS Workload Management System.
 
 Staging ground for a small set of algorithms extracted from
