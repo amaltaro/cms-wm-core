@@ -1,17 +1,16 @@
 """Tests for FileBasedSplitter."""
 
-from types import NoneType
 import pytest
 
 from cms_wm_core.job_splitting import (
     FileBasedRequest,
     FileBasedSplitter,
     ResourceBudgets,
+    ResourceEstimates,
     ResourceRates,
     SplitFile,
-    SplitResult,
     SplitJob,
-    ResourceEstimates,
+    SplitResult,
 )
 
 
@@ -120,7 +119,7 @@ def test_resource_estimates_use_decomposed_rates():
     )
     job = FileBasedSplitter().split(request).jobs[0]
     assert job.estimates.walltime == 20.0
-    assert job.estimates.scratch_disk == 30.0
+    assert job.estimates.scratch_disk == 70.0  # (3+4) * 10 events
     assert job.estimates.persisted_output == 40.0
     assert job.estimates.network == 1000.0
 
@@ -147,7 +146,11 @@ def test_single_file_over_max_walltime_is_unsplittable():
 
 def test_closes_before_adding_file_that_would_exceed_max_disk():
     request = FileBasedRequest(
-        files=_files(("/store/a.root", 40, 400), ("/store/b.root", 50, 500), ("/store/c.root", 60, 600)),
+        files=_files(
+            ("/store/a.root", 40, 400),
+            ("/store/b.root", 50, 500),
+            ("/store/c.root", 60, 600),
+        ),
         files_per_job=10,
         rates=ResourceRates(transient_output_size_per_event=1.0),
         budgets=ResourceBudgets(max_job_disk=50.0),
