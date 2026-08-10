@@ -218,14 +218,20 @@ A single `size_per_event` is too coarse. Prefer three rates:
 | Rate | Meaning | Typical use |
 | --- | --- | --- |
 | `input_size_per_event` | Average input bytes per event | Network estimate (remote read); may inform local staging needs |
-| `transient_output_size_per_event` | Output written to worker **scratch** | Scratch disk estimate and disk target/max packing |
-| `persisted_output_size_per_event` | Output that must be **staged out** to long-term storage | Stage-out volume estimate (not necessarily a close condition) |
+| `transient_output_size_per_event` | Intermediate output on worker scratch | Part of scratch-disk estimate |
+| `persisted_output_size_per_event` | Output that must be **staged out** after processing | Stage-out volume; also counted in scratch while the job runs |
 
 **Scratch disk estimate** (normative intent):
 
 ```text
-estimated_scratch ≈ n_events × transient_output_size_per_event
+estimated_scratch ≈ n_events × (transient_output_size_per_event + persisted_output_size_per_event)
+estimated_persisted ≈ n_events × persisted_output_size_per_event
 ```
+
+During the job, both transient and persisted products occupy the worker
+scratch area. After processing, a post-process step stages persisted data to
+shared storage; when the job container finishes, all scratch used by that job
+is released.
 
 Whether a local copy of input also counts against scratch is **TBD** per
 runtime model; if it does, document it as an additive term, not by collapsing
@@ -263,7 +269,8 @@ wall time and scratch remain the primary resource close drivers.
 | --- | --- | --- |
 | `time_per_event` | Average processing time per event | Caller (task / campaign performance) |
 | `input_size_per_event` | Average input bytes per event | Caller and/or derived from file size/events |
-| `transient_output_size_per_event` | Scratch output bytes per event | Caller |
+| `transient_output_size_per_event` | Intermediate scratch bytes per event | Caller |
+| `persisted_output_size_per_event` | Stage-out bytes per event (also on scratch while running) | Caller |
 | `persisted_output_size_per_event` | Stage-out bytes per event | Caller |
 | `target_job_walltime` | Preferred estimated wall time per job | Caller (ops / campaign policy) |
 | `max_job_walltime` | Hard wall-time ceiling (e.g. pilot max) | Caller (pilot / site policy) |
@@ -306,6 +313,8 @@ Under `src/cms_wm_core/job_splitting/`:
 | `types.py` | Dataclasses only: files, run/lumi triples, rates, budgets, jobs, results |
 | `base.py` | `JobSplitter` ABC — subclasses must implement `name` and `split` |
 | `file_based.py` | FileBased v1 + `FileBasedRequest` |
+| `file_lumi_aware.py` | FileBased + keep shared `(run, lumi)` in one job |
+| `file_common.py` | Shared estimate / validation helpers for file-oriented splitters |
 | further algorithms | Own `*Request` dataclass + `JobSplitter[ThatRequest]` |
 
 `typing.Protocol` / duck typing is intentionally avoided so each field has an
@@ -349,8 +358,8 @@ No required Rucio container/dataset fields on the core input.
   tuple on ``SplitResult.jobs``
 - Each job: ordered input LFNs, mask (when applicable), **resource estimates**:
   - wall time
-  - scratch disk (from transient output, ± TBD input staging)
-  - persisted / stage-out volume
+  - scratch disk (transient + persisted; ± TBD input staging)
+  - persisted / stage-out volume (subset of scratch)
   - network (from input file sizes when remote read applies)
 - optional creation-failure / unsplittable marker and reason
 - small baggage dict if needed
@@ -395,15 +404,40 @@ estimate). `run_lumis` and `locations` are ignored if present.
 **Output:** ordered ``SplitResult.jobs`` (LFN-sorted packing). Deterministic for
 the same input.
 
+## FileLumiAware
+
+Variant of FileBased that is **run+lumi aware**.
+
+### Extra constraint
+
+Each file must carry a non-empty ``run_lumis`` list of ``(run, lumi[, events])``
+entries. Files that share any ``(run, lumi)`` — including **transitively**
+through other files — form one atomic component and are always assigned to the
+**same job**.
+
+This algorithm is the **only** place that supports a run+lumi scattered across
+multiple files. All other algorithms and downstream steps may assume a
+run+lumi lives in a single file.
+
+### Packing
+
+Same as FileBased otherwise:
+
+- ``files_per_job`` packs whole **components** (never splits a component)
+- A component larger than ``files_per_job`` still becomes one job
+- Resource rates / targets / maxima apply to the files in the job
+- Estimates use file-level ``events`` and ``size``
+- Deterministic: components ordered by minimum LFN; LFNs sorted within a job
+
 ## Planned extract order
 
-1. **FileBased** — v1 scope above; characterization tests first
-2. **EventBased** — establishes mask / event-boundary semantics
-3. **LumiBased**, then **EventAwareLumiBased** — when run/lumi constraints
-   are required
+1. **FileBased** — v1 scope above
+2. **FileLumiAware** — FileBased + co-locate shared ``(run, lumi)``
+3. **EventBased** — event-boundary / mask semantics
+4. **LumiBased**, then **EventAwareLumiBased** — pack by lumis/events
 
 Defer: merge/sibling/Harvest splitters, WorkQueue start policies, T0-specific
-algorithms, FileBased parentage and `jobs_per_group`.
+algorithms, FileBased parentage and ``jobs_per_group``.
 
 ## Provenance
 
