@@ -1,7 +1,7 @@
 """Abstract base for job splitting algorithms.
 
 ``JobSplitter`` is the **behavior** contract: every algorithm must implement
-``split``. Request/response **shapes** live in ``types`` (and later in
+``split`` and ``name``. Request/response **shapes** live in ``types`` (and later in
 per-algorithm request dataclasses).
 
 This uses ``abc.ABC`` (explicit subclassing), not duck typing.

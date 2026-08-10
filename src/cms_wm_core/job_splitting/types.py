@@ -64,7 +64,12 @@ class ResourceBudgets:
 
 @dataclass(frozen=True)
 class ResourceEstimates:
-    """Estimated cost of one job (splitter output; no memory)."""
+    """Estimated cost of one job (splitter output; no memory).
+
+    ``scratch_disk`` is peak local disk while the job runs (transient plus
+    persisted outputs). ``persisted_output`` is the subset that must be staged
+    out after processing; it is already included in ``scratch_disk``.
+    """
 
     walltime: float = 0.0
     scratch_disk: float = 0.0
