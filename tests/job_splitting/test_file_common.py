@@ -4,6 +4,7 @@ import pytest
 
 from cms_wm_core.job_splitting.file_common import (
     estimates_for,
+    estimates_for_events,
     exceeds_maximum,
     make_job,
     meets_soft_target,
@@ -15,6 +16,21 @@ from cms_wm_core.job_splitting.types import (
     ResourceRates,
     SplitFile,
 )
+
+
+def test_estimates_for_events_without_files():
+    estimates = estimates_for_events(
+        10,
+        ResourceRates(
+            time_per_event=2.0,
+            transient_output_size_per_event=1.0,
+            persisted_output_size_per_event=1.0,
+        ),
+    )
+    assert estimates.walltime == 20.0
+    assert estimates.scratch_disk == 20.0
+    assert estimates.persisted_output == 10.0
+    assert estimates.network == 0.0
 
 
 def test_estimates_for_empty_file_list():
