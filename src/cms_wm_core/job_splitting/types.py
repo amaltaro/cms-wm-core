@@ -79,11 +79,21 @@ class ResourceEstimates:
 
 @dataclass(frozen=True)
 class SplitJob:
-    """One job produced by a splitter."""
+    """One job produced by a splitter.
 
-    # Stable order of LFNs (determinism).
-    input_lfns: tuple[str, ...]
+    File-oriented splitters fill ``input_lfns``. EventBased (MC) uses
+    ``first_event`` / ``n_events`` as a half-open range
+    ``[first_event, first_event + n_events)`` and a unique ``lumi``.
+    """
+
+    # Stable order of LFNs (determinism); empty for no-input EventBased.
+    input_lfns: tuple[str, ...] = ()
     estimates: ResourceEstimates = field(default_factory=ResourceEstimates)
+    # Half-open event range; None when unused (e.g. FileBased).
+    first_event: int | None = None
+    n_events: int | None = None
+    # Unique luminosity section id for MC EventBased jobs.
+    lumi: int | None = None
     # True when this unit cannot fit under maxima (unsplittable).
     unsplittable: bool = False
     unsplittable_reason: str | None = None

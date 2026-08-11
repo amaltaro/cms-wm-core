@@ -1,7 +1,7 @@
-"""Shared helpers for file-oriented job splitters.
+"""Shared helpers for job splitters.
 
-Used by ``file_based`` and ``file_lumi_aware``. Not part of the public package
-API (not re-exported from ``__init__``); import from algorithm modules instead.
+Used by file-oriented and event-based algorithms. Not part of the public
+package API (not re-exported from ``__init__``).
 """
 
 from __future__ import annotations
@@ -15,18 +15,31 @@ from cms_wm_core.job_splitting.types import (
 )
 
 
+def estimates_for_events(
+    n_events: int,
+    rates: ResourceRates,
+    *,
+    network: float = 0.0,
+) -> ResourceEstimates:
+    """Resource estimates for a known event count (no input files required)."""
+    transient = n_events * rates.transient_output_size_per_event
+    persisted = n_events * rates.persisted_output_size_per_event
+    return ResourceEstimates(
+        walltime=n_events * rates.time_per_event,
+        scratch_disk=transient + persisted,
+        persisted_output=persisted,
+        network=network,
+    )
+
+
 def estimates_for(
     files: list[SplitFile],
     rates: ResourceRates,
 ) -> ResourceEstimates:
     total_events = sum(f.events for f in files)
-    transient = total_events * rates.transient_output_size_per_event
-    persisted = total_events * rates.persisted_output_size_per_event
-    return ResourceEstimates(
-        walltime=total_events * rates.time_per_event,
-        # Both live on the worker scratch area for part of the job lifetime.
-        scratch_disk=transient + persisted,
-        persisted_output=persisted,
+    return estimates_for_events(
+        total_events,
+        rates,
         network=float(sum(f.size for f in files)),
     )
 
