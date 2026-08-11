@@ -524,3 +524,74 @@ and ACDC paths.
 When porting, record upstream path and intent of changes in the module
 docstring or PR (see `AGENTS.md`). Prefer behavior-preserving extraction,
 then refactor behind the contracts above.
+
+## Future work / TODO
+
+### Pileup in resource estimates (especially network)
+
+CMS jobs often read **pileup** datasets in addition to primary input (or, for
+MC EventBased, in addition to generating events with no primary input files).
+Pileup can dominate remote I/O.
+
+Today `ResourceEstimates.network` is:
+
+- FileBased / FileLumiAware: sum of primary input file sizes
+- EventBased: `0` (no primary input)
+
+**TODO:** Factor pileup into job resource estimates so matchmaking /
+provisioning see realistic network (and related) demand. At minimum:
+
+- Model pileup contribution to **`network`** (bytes expected to be read,
+  typically remotely)
+- Decide whether pileup also affects scratch, walltime, or other estimates
+- Keep pileup discovery/config outside the core splitter; pass resolved
+  rates or byte estimates on the request (same separation-of-concerns rule
+  as other performance inputs)
+- Ensure EventBased MC jobs can report non-zero network when pileup is used
+
+Without this, the WMS under-characterizes network activity and the underlying
+resource provisioning / matchmaking stack lacks information needed for sound
+resource-vs-job matching.
+
+### HEPScore-normalized work and Dirac / DiracX alignment
+
+Wall-clock estimates today use a raw `time_per_event` rate. That rate depends
+on the **worker capability**. Benchmarks such as **HEPScore23** (CPU) and
+**HEPScore4GPU** provide a common scale across heterogeneous sites.
+
+DIRAC (and the DiracX direction) uses HEPScore mainly as a **normalization
+metric for CPU power**, feeding matching, accounting, and workload sizing in
+the Transformation Framework. In outline (to be validated against current
+DIRAC / DiracX docs and code):
+
+- **Normalized work** — express effort as HEPScore×seconds (or
+  HEPScore·s per event / per MB), not uncalibrated wall seconds alone.
+  HEPScore23 is the WLCG successor path away from legacy HS06 / DB12.
+- **Pilot / site calibration** — WN power comes from site-advertised values
+  (env, CE/GLUE2) or a quick local benchmark scaled to HEPScore equivalents.
+- **Matching** — compare a job’s required **normalized** time to queue /
+  pilot limits so work fits before expiration.
+
+**TODO:** Align these splitters with that model once confirmed correct for
+DiracX, for example:
+
+- Quote packing rates as **normalized cost per event**
+  (HEPScore·s/event), plus a **reference HEPScore** (and later GPU score)
+- Size jobs with a formula in the spirit of:
+
+  ```text
+  events_per_job ≈
+    (target_walltime × reference_HEPScore × N_cores × ε)
+    / (normalized_cost_per_event)
+  ```
+
+  where `ε ≤ 1` is multi-core scaling efficiency (I/O / memory bandwidth
+  often prevent linear speedup)
+- Apply a **safety margin** on max walltime (DIRAC practice often cites
+  ~15–20%) for I/O stalls and host load vs peak advertised score
+- Keep site score discovery outside the core algorithm; pass normalized
+  rates / reference score / `ε` on the request so estimates stay portable
+
+Until then, walltime targets and maxima assume an implicit machine class and
+will mis-size jobs on faster or slower workers—and will not match DIRAC’s
+normalized matching units.
