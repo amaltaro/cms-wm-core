@@ -1,3 +1,3 @@
 """Core libraries for CMS Workload Management algorithms."""
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
