@@ -10,16 +10,16 @@ WMCore ``EventAwareLumiBased`` (production) and ``EventAwareLumiByWork``
 ``events_per_job = floor(target_job_walltime / time_per_event)``. Within each
 file, per-lumi ``events`` must be uniformly ``int`` (used directly) or
 uniformly ``None`` (each lumi weighted ``round(file.events / n_lumis)``).
-Mixed known/legacy metadata in one file is rejected. Jobs accumulate one or
-more lumis. Packing closes before the next lumi when adding it would not get
-closer to the event target (ByWork closest-to-target rule).
+Mixed known/legacy event count metadata in one file is rejected. Jobs
+accumulate one or more lumis. Packing closes before the next lumi when adding
+it would not get closer to the event target (ByWork closest-to-target rule).
 
 Each ``(run, lumi)`` must appear in exactly one input file. Workflows that
 share the same run/lumi across files must use :class:`FileLumiAwareSplitter`
 instead — that is the only algorithm that supports that case.
 
 v1: process every lumi on each input file (no allow-list); no run/file
-boundary flags (open question in ``docs/job-splitting.md``); jobs may span
+boundary flags (open question in ``docs/event-aware-lumi.md``); jobs may span
 runs and files. Omitted: location bucketing, ACDC, parents, pileup baggage.
 """
 

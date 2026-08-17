@@ -17,7 +17,7 @@ persisted to shared storage — so estimates force
 ``transient_output_size_per_event=0``; scratch still includes persisted
 bytes. v1 leftover policy: every started job is emitted after the full scan
 (complete pre-scoped requests). Location bucketing, run/lumi merge order,
-and event masks are omitted; see ``docs/job-splitting.md``.
+and event masks are omitted; see ``docs/merge-by-size.md``.
 """
 
 from __future__ import annotations

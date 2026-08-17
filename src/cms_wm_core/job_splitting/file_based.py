@@ -6,7 +6,7 @@ https://github.com/dmwm/WMCore/blob/master/src/python/WMCore/JobSplitting/FileBa
 Packs whole files into jobs using ``files_per_job``. The caller must supply a
 location-consistent file list; this algorithm does not bucket by site.
 
-Intentionally omitted (see ``docs/job-splitting.md``):
+Intentionally omitted (see ``docs/file-based.md``):
 
 * location sorting / multi-site job groups
 * run / lumi masks and run boundaries (use ``file_lumi_aware`` instead)
