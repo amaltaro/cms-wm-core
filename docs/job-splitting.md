@@ -321,7 +321,7 @@ Under `src/cms_wm_core/job_splitting/`:
 | `file_lumi_aware.py` | FileBased + keep shared `(run, lumi)` in one job |
 | `event_based.py` | MC EventBased + `EventBasedRequest` |
 | `file_common.py` | Shared estimate / validation helpers |
-| `event_aware_lumi.py` | Final processing (design draft; not implemented yet) |
+| `event_aware_lumi.py` | Final processing EventAwareLumi + `EventAwareLumiRequest` |
 | further algorithms | Own `*Request` dataclass + `JobSplitter[ThatRequest]` |
 
 `typing.Protocol` / duck typing is intentionally avoided so each field has an
@@ -408,8 +408,9 @@ estimate). `run_lumis` and `locations` are ignored if present.
 **Input request:** `files_per_job`, file tuple, `ResourceRates`, optional
 `ResourceBudgets`.
 
-**Output:** ordered ``SplitResult.jobs`` (LFN-sorted packing). Deterministic for
-the same input.
+**Output:** ordered ``SplitResult.jobs`` (LFN-sorted packing). Each job sets
+``n_events`` to the sum of assigned file-level ``events`` (same total used for
+resource estimates). Deterministic for the same input.
 
 ## FileLumiAware
 
@@ -423,8 +424,8 @@ through other files — form one atomic component and are always assigned to the
 **same job**.
 
 This algorithm is the **only** place that supports a run+lumi scattered across
-multiple files. All other algorithms and downstream steps may assume a
-run+lumi lives in a single file.
+multiple files. All other algorithms (including EventAwareLumi) and downstream
+steps require each run+lumi to live in a single file.
 
 ### Packing
 
@@ -433,7 +434,8 @@ Same as FileBased otherwise:
 - ``files_per_job`` packs whole **components** (never splits a component)
 - A component larger than ``files_per_job`` still becomes one job
 - Resource rates / targets / maxima apply to the files in the job
-- Estimates use file-level ``events`` and ``size``
+- Estimates use file-level ``events`` and ``size``; jobs set ``n_events`` to
+  that event sum
 - Deterministic: components ordered by minimum LFN; LFNs sorted within a job
 
 ## EventBased (v1 scope)
@@ -609,16 +611,22 @@ the production semantics of **EventAwareLumiBased**, adopt the work-centric
 packing improvements of **EventAwareLumiByWork**, and fit the shared
 resource / pre-scoped-input model used by FileBased and EventBased.
 
-No implementation yet; this section is the design baseline.
+Implemented in ``event_aware_lumi.py`` (v1). This section remains the design
+baseline; open questions (run/file boundaries, allow-list) are unchanged.
 
 ### Problem statement
 
 Always **real input files**. Each file carries a non-empty `run_lumis` list of
 `(run, lumi, events)` where `events` may be `int` or `None`:
 
-- **Legacy:** `events is None` → size using an **average events per lumi**
-- **Modern (~2018+):** integer per lumi → pack using **those** counts and a
-  closest-to-target rule (no averaging)
+- **Legacy:** all per-lumi `events` are `None` → size using an **average
+  events per lumi** (`round(file.events / n_lumis)`) for packing and
+  `n_events`
+- **Modern (~2018+):** all per-lumi `events` are ints → pack using **those**
+  counts and a closest-to-target rule (no averaging)
+
+Mixed known/legacy counts **within one file** are rejected. A request may
+still combine fully-legacy and fully-known files.
 
 **v1 scope of work per file:** process **all** `(run, lumi)` entries present on
 each input file. There is no run/lumi allow-list yet; subsetting a file is
@@ -656,17 +664,18 @@ before the close/keep decision:
 
 | Per-lumi `events` | Weight used for packing |
 | --- | --- |
-| `int` | That integer (no averaging) |
-| `None` | File-level average: `round(file.events / n_lumis_in_file)` (or
-  equivalent documented formula) |
+| all `int` in the file | Those integers (no averaging) |
+| all `None` in the file | File-level average:
+  `round(file.events / n_lumis_in_file)` for every lumi |
 
 Then apply the **closest-to-`events_per_job`** close rule (ByWork). When every
 lumi in a file uses the same average weight, this is approximately the old
 “convert target → `lumisPerJob`” behavior, without a separate code path.
 
-**Policy for mixed metadata in one request:** resolve weights per lumi as
-above (average only where `None`). Do not force the whole request into
-average-only mode if some lumis already have counts.
+**Policy per file:** event metadata must be uniform — either every lumi has an
+`int` count or every lumi is `None`. Mixing both in one file is rejected
+(not expected in production). Different files in one request may differ
+(some fully known, some fully legacy).
 
 **Empty / zero-event files:** define explicitly in implementation (skip vs
 pack all remaining lumis); mirror upstream’s “zero events → treat as
@@ -674,16 +683,12 @@ unlimited / take remaining lumis” only where tests justify it.
 
 ### Cross-file `(run, lumi)`
 
-Prefer ByWork’s `filesByLumi` map so a lumi that appears in more than one
-file is assigned once and pulls all containing LFNs into the job.
-
-Interaction with **FileLumiAware:** that algorithm remains the dedicated
-place to **force co-location** when shared lumis must not be separated under
-file-count packing. EventAwareLumi may still see multi-file lumis in input;
-it must not double-process a `(run, lumi)`. Deterministic order: sort files
-by LFN; process unseen `(run, lumi)` in a stable order (e.g. by
-`(run, lumi)`, or by first appearance under LFN-sorted files — pick one and
-lock it with tests).
+**Invariant:** outside the special FileLumiAware workflow, each
+`(run, lumi)` lives in **exactly one** file. EventAwareLumi work units are
+therefore `(run, lumi)` **on a single file**. If the same key appears in more
+than one input file, EventAwareLumi raises; the caller must use
+**FileLumiAware** for that workflow (the only algorithm that co-locates
+shared lumis under file-count packing).
 
 ### Job output shape (gap vs current types)
 
@@ -768,7 +773,10 @@ EventAwareLumiRequest:
 EventAwareLumi(JobSplitter[EventAwareLumiRequest])
 ```
 
-Module: `event_aware_lumi.py` (name TBD at implementation time).
+Module: `event_aware_lumi.py`.
+
+**v1 packing defaults (pending open question):** no run/file boundary stops;
+jobs may span runs and files. Only the event-target close rule applies.
 
 ### Determinism and WM memory
 
@@ -784,9 +792,9 @@ Module: `event_aware_lumi.py` (name TBD at implementation time).
 2. Add compact mask representation on `SplitJob` (or a nested type);
    set `n_events` to the assigned/estimated event total on every job
 3. Implement work-centric packer + average fallback + unsplittable path
-4. Unit tests: all-`None` (average), all-`int` (closest), mixed,
-   multi-file lumi, oversized single lumi, determinism, and that
-   `n_events` matches the packed lumi weights
+4. Unit tests: all-`None` (average), all-`int` (closest), reject mixed
+   metadata, reject shared multi-file lumi, oversized single lumi,
+   determinism, and that `n_events` matches the packed lumi weights
    (plus run/file boundary cases once that open question is settled)
 
 ## Planned extract order
