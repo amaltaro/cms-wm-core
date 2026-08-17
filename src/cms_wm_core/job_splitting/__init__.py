@@ -6,7 +6,7 @@ Typical layout:
 * ``base`` — ``JobSplitter`` ABC (behavior every algorithm must implement)
 * ``file_common`` — common functionality for file-based algorithms
 * ``file_based`` / ``file_lumi_aware`` / ``event_based`` /
-  ``event_aware_lumi`` — concrete algorithms
+  ``event_aware_lumi`` / ``merge_by_size`` — concrete algorithms
 
 See ``docs/job-splitting.md`` for design invariants.
 """
@@ -21,6 +21,10 @@ from cms_wm_core.job_splitting.file_based import FileBasedRequest, FileBasedSpli
 from cms_wm_core.job_splitting.file_lumi_aware import (
     FileLumiAwareRequest,
     FileLumiAwareSplitter,
+)
+from cms_wm_core.job_splitting.merge_by_size import (
+    MergeBySizeRequest,
+    MergeBySizeSplitter,
 )
 from cms_wm_core.job_splitting.types import (
     ResourceBudgets,
@@ -43,6 +47,8 @@ __all__ = [
     "FileLumiAwareRequest",
     "FileLumiAwareSplitter",
     "JobSplitter",
+    "MergeBySizeRequest",
+    "MergeBySizeSplitter",
     "ResourceBudgets",
     "ResourceEstimates",
     "ResourceRates",
