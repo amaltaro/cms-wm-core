@@ -70,9 +70,11 @@ def test_packs_by_files_per_job_and_sorts_by_lfn():
     jobs = result.jobs
     assert len(jobs) == 2
     assert jobs[0].input_lfns == ("/store/a.root", "/store/b.root")
+    assert jobs[0].n_events == 5
     assert jobs[0].estimates.walltime == 5.0
     assert jobs[0].estimates.network == 500.0
     assert jobs[1].input_lfns == ("/store/c.root",)
+    assert jobs[1].n_events == 1
     assert jobs[1].estimates.walltime == 1.0
     assert jobs[1].estimates.network == 100.0
 

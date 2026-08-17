@@ -142,6 +142,7 @@ def test_make_job_sorts_lfns_and_computes_estimates():
     ]
     job = make_job(files, ResourceRates(time_per_event=1.0))
     assert job.input_lfns == ("/store/a.root", "/store/b.root")
+    assert job.n_events == 5
     assert job.estimates.walltime == 5.0
     assert job.estimates.network == 50.0
     assert job.unsplittable is False
