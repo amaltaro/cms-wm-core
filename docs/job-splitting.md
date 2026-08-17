@@ -322,6 +322,8 @@ Under `src/cms_wm_core/job_splitting/`:
 | `event_based.py` | MC EventBased + `EventBasedRequest` |
 | `file_common.py` | Shared estimate / validation helpers |
 | `event_aware_lumi.py` | Final processing EventAwareLumi + `EventAwareLumiRequest` |
+| `merge_by_size.py` | Merge packing by target output size (design draft; not
+  implemented yet) |
 | further algorithms | Own `*Request` dataclass + `JobSplitter[ThatRequest]` |
 
 `typing.Protocol` / duck typing is intentionally avoided so each field has an
@@ -798,19 +800,156 @@ jobs may span runs and files. Only the event-target close rule applies.
    determinism, and that `n_events` matches the packed lumi weights
    (plus run/file boundary cases once that open question is settled)
 
+## MergeBySize (cms-wm-core design — draft)
+
+Upstream:
+[MergeBySize.py](https://github.com/dmwm/WMCore/blob/master/src/python/WMCore/JobSplitting/MergeBySize.py).
+
+Merge packing: combine **small input files** into merge jobs whose expected
+**output** size is driven by the sum of those inputs. Used when many tiny
+files must be merged into fewer, larger files for efficient storage and
+downstream processing.
+
+No implementation yet; this section is the design baseline.
+
+### Upstream behavior (summary)
+
+[MergeBySize](https://github.com/dmwm/WMCore/blob/master/src/python/WMCore/JobSplitting/MergeBySize.py):
+
+1. Requires `merge_size` (target bytes for a merge job’s accumulated inputs).
+2. Optional `all_files` (overflow): if true, leftover files that never reach
+   `merge_size` still become a final merge job; if false, leftovers are left
+   for a later cycle.
+3. Buckets by **location** (`sortByLocation`), then walks files in each bucket,
+   accumulating `size` until `accumSize >= merge_size`, then emits a job and
+   resets.
+4. A single file with `size >= merge_size` closes a job by itself (alone in
+   that merge job).
+5. Sets a trivial event mask (`max/skip` events) on merge jobs.
+
+The upstream module docstring also mentions grouping by run and sorting by
+lumi; the current implementation does **not** do that — only location + size
+accumulation. We do not invent run/lumi merge constraints unless a real
+caller needs them.
+
+### What drives splitting (cms-wm-core)
+
+| Input | Role |
+| --- | --- |
+| File list with **`size`** (and `lfn`) | Units to pack; size is the packing signal |
+| `target_output_file_size` | Close the current merge job when
+  `sum(assigned input sizes) >= target_output_file_size` |
+
+Assumption (same as other algorithms): the caller passes a
+**location-consistent** file list. No location bucketing inside the core
+splitter.
+
+**Single large file:** if one input already has
+`size >= target_output_file_size`, it becomes a merge job by itself.
+
+**Order:** sort by LFN before packing for determinism (upstream uses
+`fileset.sort()` / location iteration).
+
+### Packing rule
+
+```text
+current = []
+accum = 0
+for file in lfn_sorted(files):
+    current.append(file)
+    accum += file.size
+    if accum >= target_output_file_size:
+        emit job(current)
+        current, accum = [], 0
+# leftover: see open question below
+```
+
+Jobs may contain one or many files. Estimated output size for characterization
+is `accum` (sum of input sizes) at emit time — merge is treated as roughly
+size-preserving for packing purposes.
+
+### Explicitly out of scope (v1)
+
+| Upstream / idea | Decision |
+| --- | --- |
+| Location bucketing | **Omit** (pre-scoped input) |
+| Run / lumi grouping for merge order | **Omit** for v1 (not in upstream code
+  path; see Future work for a contiguous run/lumi variant) |
+| WMBS / subscription / UUID job names | **Omit** |
+| Event masks on merge jobs | **Omit** unless a consumer requires a
+  sentinel mask |
+| Parents / ACDC | **Omit** |
+
+### Resource estimates and `n_events`
+
+Merge jobs are I/O-heavy, not “events × time_per_event” in the processing
+sense. Proposed v1:
+
+- **`network`**: sum of assigned input file sizes (read volume)
+- **`n_events`**: sum of file-level `events` when present (characterization);
+  still useful if merge accounting cares about event totals
+- **Walltime / scratch / persisted**: either omit rates for v1 (zeros) or
+  accept optional merge-specific rates later — **open** if first
+  implementation needs non-zero CPU/disk estimates
+
+Do not pretend processing `time_per_event` applies unless the caller passes
+merge-calibrated rates.
+
+### Open question: leftover files below target
+
+Upstream only emits the trailing partial job when `all_files` / overflow is
+true; otherwise small remainders wait for more files next cycle.
+
+**Decide before locking v1:**
+
+1. **Always flush** leftovers as a final (undersized) merge job — simplest;
+   matches “this request is the full work set.”
+2. **Overflow flag** — mirror upstream `all_files` for callers that stream
+   incomplete filesets.
+3. **Never flush** — return unassigned files to the caller (API change;
+   `SplitResult` today only carries jobs).
+
+For pre-scoped, complete file lists (our usual invariant), **always flush**
+is the natural default. Record the choice in the module docstring when
+implementing.
+
+### Type / API sketch
+
+```text
+MergeBySizeRequest:
+  files: tuple[SplitFile, ...]          # lfn + size required; events optional
+  target_output_file_size: int          # > 0
+  # leftover policy: TBD (default always-flush recommended)
+  rates: ResourceRates = ResourceRates()  # optional; see estimates note
+  budgets: ResourceBudgets = ResourceBudgets()
+
+MergeBySizeSplitter(JobSplitter[MergeBySizeRequest])
+```
+
+Module: `merge_by_size.py`.
+
+### Implementation order (when we start coding)
+
+1. `MergeBySizeRequest` + LFN-sorted size accumulator + always-flush (or
+   chosen leftover policy)
+2. Single-file-over-target and multi-file close-at-threshold tests
+3. Determinism (file order independence) and empty input
+4. Document estimate fields actually populated in v1
+
 ## Planned extract order
 
 1. **FileBased** — v1 scope above
 2. **FileLumiAware** — FileBased + co-locate shared `(run, lumi)`
 3. **EventBased** — MC / no-input disjoint event ranges (v1 above)
 4. **EventAwareLumi** — final processing; design draft above
-5. **LumiBased** (optional) — fixed `lumis_per_job` if still needed apart from
+5. **MergeBySize** — merge packing by target output size (design draft above)
+6. **LumiBased** (optional) — fixed `lumis_per_job` if still needed apart from
    EventAwareLumi
 
-Defer: merge/sibling/Harvest splitters, WorkQueue start policies, T0-specific
-algorithms, FileBased parentage and `jobs_per_group`, EventBased real-file
-and ACDC paths, EventAwareLumi parents / pileup baggage / ACDC clients /
-run-lumi allow-list.
+Defer: other merge/sibling/Harvest splitters, WorkQueue start policies,
+T0-specific algorithms, FileBased parentage and `jobs_per_group`, EventBased
+real-file and ACDC paths, EventAwareLumi parents / pileup baggage / ACDC
+clients / run-lumi allow-list.
 
 ## Provenance
 
@@ -834,6 +973,24 @@ decided:
   modes; keep names/semantics clear and tested
 
 Do not implement configurable hooks until that decision is made.
+
+### MergeBySize with contiguous run/lumi order
+
+v1 MergeBySize packs by **file size only** (LFN-sorted). A useful variant
+would still close jobs on `target_output_file_size`, but prefer packing
+files whose `(run, lumi)` metadata form an **ascending, contiguous** pattern
+(better merge locality for consumers that care about run/lumi order).
+
+**TODO:**
+
+- Require non-empty `run_lumis` on each input file (unlike size-only v1)
+- Define ordering (e.g. by min `(run, lumi)` per file) and what “contiguous”
+  means across file boundaries (adjacent lumis, same run, gaps allowed or not)
+- Keep the size threshold as the primary close rule; use run/lumi order as
+  the walk / preference order, not a second independent quota — unless
+  product requirements demand hard run boundaries inside a merge job
+- Document interaction with FileLumiAware-style shared lumis (likely still
+  out of scope for merge, or co-located first)
 
 ### Run/lumi allow-list (subset of a file)
 
