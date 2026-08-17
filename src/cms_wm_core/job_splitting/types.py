@@ -14,13 +14,31 @@ from dataclasses import dataclass, field
 class RunLumiEvents:
     """One run / luminosity-section / event-count triple on a file.
 
+    ``events`` may be ``None`` for legacy metadata (no per-lumi count).
+    Event-aware algorithms then substitute a file-level average.
+
     A single file may carry on the order of **tens of thousands** of these
     entries. Prefer compact storage and avoid copying this table casually.
     """
 
     run: int
     lumi: int
-    events: int
+    events: int | None = None
+
+
+@dataclass(frozen=True)
+class RunLumiRange:
+    """Inclusive contiguous lumi range within one run (job mask entry)."""
+
+    run: int
+    first_lumi: int
+    last_lumi: int
+
+    def __post_init__(self) -> None:
+        if self.first_lumi > self.last_lumi:
+            raise ValueError(
+                f"first_lumi ({self.first_lumi}) > last_lumi ({self.last_lumi})"
+            )
 
 
 @dataclass(frozen=True)
@@ -81,19 +99,28 @@ class ResourceEstimates:
 class SplitJob:
     """One job produced by a splitter.
 
-    File-oriented splitters fill ``input_lfns``. EventBased (MC) uses
-    ``first_event`` / ``n_events`` as a half-open range
+    File-oriented splitters fill ``input_lfns`` and ``n_events`` (sum of
+    assigned file-level event counts). EventBased (MC) uses ``first_event`` /
+    ``n_events`` as a half-open range
     ``[first_event, first_event + n_events)`` and a unique ``lumi``.
+    EventAwareLumi fills ``input_lfns``, ``run_lumi_mask``, and ``n_events``
+    as the assigned (or estimated) processing event total.
     """
 
     # Stable order of LFNs (determinism); empty for no-input EventBased.
     input_lfns: tuple[str, ...] = ()
     estimates: ResourceEstimates = field(default_factory=ResourceEstimates)
-    # Half-open event range; None when unused (e.g. FileBased).
+    # Half-open event range start (EventBased); None when unused.
     first_event: int | None = None
+    # Assigned / estimated event total for characterization and estimates.
+    # FileBased / FileLumiAware: sum of file ``events``.
+    # EventBased: generated range length.
+    # EventAwareLumi: sum of packed lumi weights.
     n_events: int | None = None
     # Unique luminosity section id for MC EventBased jobs.
     lumi: int | None = None
+    # Compact run/lumi mask for processing splitters (EventAwareLumi).
+    run_lumi_mask: tuple[RunLumiRange, ...] = ()
     # True when this unit cannot fit under maxima (unsplittable).
     unsplittable: bool = False
     unsplittable_reason: str | None = None

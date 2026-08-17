@@ -5,12 +5,17 @@ Typical layout:
 * ``types`` — dataclasses for files, budgets, jobs, results (data)
 * ``base`` — ``JobSplitter`` ABC (behavior every algorithm must implement)
 * ``file_common`` — common functionality for file-based algorithms
-* ``file_based`` / ``file_lumi_aware`` / ``event_based`` — concrete algorithms
+* ``file_based`` / ``file_lumi_aware`` / ``event_based`` /
+  ``event_aware_lumi`` — concrete algorithms
 
 See ``docs/job-splitting.md`` for design invariants.
 """
 
 from cms_wm_core.job_splitting.base import JobSplitter
+from cms_wm_core.job_splitting.event_aware_lumi import (
+    EventAwareLumiRequest,
+    EventAwareLumiSplitter,
+)
 from cms_wm_core.job_splitting.event_based import EventBasedRequest, EventBasedSplitter
 from cms_wm_core.job_splitting.file_based import FileBasedRequest, FileBasedSplitter
 from cms_wm_core.job_splitting.file_lumi_aware import (
@@ -22,12 +27,15 @@ from cms_wm_core.job_splitting.types import (
     ResourceEstimates,
     ResourceRates,
     RunLumiEvents,
+    RunLumiRange,
     SplitFile,
     SplitJob,
     SplitResult,
 )
 
 __all__ = [
+    "EventAwareLumiRequest",
+    "EventAwareLumiSplitter",
     "EventBasedRequest",
     "EventBasedSplitter",
     "FileBasedRequest",
@@ -39,6 +47,7 @@ __all__ = [
     "ResourceEstimates",
     "ResourceRates",
     "RunLumiEvents",
+    "RunLumiRange",
     "SplitFile",
     "SplitJob",
     "SplitResult",
