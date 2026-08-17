@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cms-wm-core"
-version = "0.1.5"
+version = "0.1.6"
 description = "Core libraries for the future CMS Workload Management System"
 readme = "README.md"
 license = "Apache-2.0"
