@@ -322,8 +322,7 @@ Under `src/cms_wm_core/job_splitting/`:
 | `event_based.py` | MC EventBased + `EventBasedRequest` |
 | `file_common.py` | Shared estimate / validation helpers |
 | `event_aware_lumi.py` | Final processing EventAwareLumi + `EventAwareLumiRequest` |
-| `merge_by_size.py` | Merge packing by min/max output size (design draft; not
-  implemented yet) |
+| `merge_by_size.py` | Merge packing by min/max output size + `MergeBySizeRequest` |
 | further algorithms | Own `*Request` dataclass + `JobSplitter[ThatRequest]` |
 
 `typing.Protocol` / duck typing is intentionally avoided so each field has an
@@ -810,7 +809,10 @@ Merge packing: combine **small input files** into merge jobs whose expected
 files must be merged into fewer, larger files for efficient storage and
 downstream processing.
 
-No implementation yet; this section is the design baseline.
+Implemented in ``merge_by_size.py`` (v1). Leftover policy for v1 is
+**always flush** (every seeded job is emitted after a full remainder scan).
+Packing uses size-descending order and rescans remaining files to fill toward
+``max``; ``min`` defines the desired band and is validated on the request.
 
 ### Upstream behavior (summary)
 
@@ -842,9 +844,9 @@ past) the maximum — fewer tiny merge products, still within limits.
 | Input | Role |
 | --- | --- |
 | File list with **`size`** (and `lfn`) | Units to pack; size is the packing signal |
-| `min_output_file_size` | Soft floor: prefer not to emit a job below this
+| `min_output_size_bytes` | Soft floor: prefer not to emit a job below this
   when more files might still fit |
-| `max_output_file_size` | Ceiling when **combining** files: do not add
+| `max_output_size_bytes` | Ceiling when **combining** files: do not add
   another file if the sum would exceed this (`min <= max`, both `> 0`) |
 
 Assumption (same as other algorithms): the caller passes a
@@ -855,37 +857,36 @@ splitter.
 **alone as a normal merge job** (not `unsplittable`), so the already-processed
 file still gets a merge attempt.
 
-**Order:** sort by LFN before packing for determinism.
+**Order / fill:** sort by **`(-size, lfn)`** (largest first). Each job is
+seeded with the next remaining file; the packer then scans **all** remaining
+files and adds every candidate that still fits under ``max``. That costs
+``O(n^2)`` but fills closer to the ceiling and mixes large seeds with smaller
+files that fit in the slack. Close the job only after that full scan (or when
+the seed alone is oversize).
 
-### Packing rule (greedy fill up to max)
-
-Walk LFN-sorted files. While the next file fits under the ceiling, **add it**
-— even if the current job is already at or above `min_output_file_size`.
-Close only when the next file would exceed `max_output_file_size` (or the
-input list ends).
+### Packing rule (fill toward max)
 
 ```text
-require min_output_file_size <= max_output_file_size
+require min_output_size_bytes <= max_output_size_bytes
 
-current, accum = [], 0
-for file in lfn_sorted(files):
-    if file.size > max_output_file_size:
-        if current:
-            emit job(current)   # see leftover policy if accum < min
-            current, accum = [], 0
-        emit job([file])        # alone; oversize — see open note
+remaining = sorted(files, key=(-size, lfn))
+while remaining:
+    seed = remaining.pop(0)
+    if seed.size > max_output_size_bytes:
+        emit job([seed])   # alone; oversize — see open note
         continue
-    if current and accum + file.size > max_output_file_size:
-        emit job(current)       # may be >= min after greedy fill
-        current, accum = [], 0
-    current.append(file)
-    accum += file.size
-# end of list: see leftover policy for remaining current
+    current, accum = [seed], seed.size
+    for each candidate still in remaining (in order):
+        if accum + candidate.size <= max_output_size_bytes:
+            move candidate into current; accum += candidate.size
+    emit job(current)      # may be < min if nothing else fit
 ```
 
-Invariant after a normal multi-file close: `accum <= max_output_file_size`.
-Greedy fill means jobs tend toward the high end of the band when file sizes
-allow. A lone oversize file is the intentional exception to the ceiling.
+Unlike next-fit (close when the immediate next file does not fit), this
+rescans the whole remainder so a large seed can still pick up later small
+files that fit in the slack. Multi-file jobs always satisfy
+``accum <= max_output_size_bytes``. A lone oversize file is the intentional
+exception to the ceiling.
 
 Estimated output size for characterization is `accum` (sum of input sizes)
 at emit time — merge is treated as roughly size-preserving for packing.
@@ -905,65 +906,57 @@ at emit time — merge is treated as roughly size-preserving for packing.
 
 ### Resource estimates and `n_events`
 
-Merge jobs are I/O-heavy, not “events × time_per_event” in the processing
-sense. Proposed v1:
+Reminder (same model as elsewhere in this doc): **transient** output lives
+only on worker scratch; **persisted** output is written to scratch **and**
+staged to shared storage. Estimated scratch is always
+`transient + persisted` while the job runs.
+
+Merge jobs are I/O-heavy. Proposed v1:
 
 - **`network`**: sum of assigned input file sizes (read volume)
-- **`n_events`**: sum of file-level `events` when present (characterization);
-  still useful if merge accounting cares about event totals
-- **Walltime / scratch / persisted**: either omit rates for v1 (zeros) or
-  accept optional merge-specific rates later — **open** if first
-  implementation needs non-zero CPU/disk estimates
+- **`n_events`**: sum of file-level `events` when present (characterization)
+- **`transient_output_size_per_event`**: forced to **0** — merge has no
+  scratch-only product; the merge output is persisted (shared storage). Callers
+  may still pass a non-zero transient rate; it is ignored.
+- **`persisted_output` / scratch / walltime**: from optional rates ×
+  `n_events` when provided (otherwise zeros). Scratch therefore equals
+  persisted for merge jobs (`0 + persisted`), not zero disk.
 
 Do not pretend processing `time_per_event` applies unless the caller passes
 merge-calibrated rates.
 
-### Open question: leftover files below min
+### Leftover files below min (v1 decision)
 
 With a min/max band, mid-stream closes (next file does not fit under max)
 should normally leave `accum >= min` after greedy fill. The hard case is the
 **tail** of the request (or a gap before an oversized file): `accum < min`
 and nothing else fits.
 
-Upstream only emits undersized tails when `all_files` / overflow is true.
-
-**Decide before locking v1:**
-
-1. **Always flush** tails below min as a final undersized merge job — simplest
-   for a complete, pre-scoped file list.
-2. **Never flush** below min — omit those LFNs from `SplitResult.jobs`; the
-   caller / WM retains them and retries when more files arrive (no API change
-   if the contract is “only packed files appear in jobs”; avoid log-only
-   signaling).
-3. **Flag** — `flush_remainder: bool` to choose per request.
-
-Min/max greedy fill already reduces tiny outputs for the common path. The
-leftover policy only matters for remainders that cannot reach `min`. Prefer
-documenting (1) or (2) explicitly rather than printing unassigned files.
+**v1: always flush** undersized remainders as a merge job. That matches
+complete, pre-scoped file lists. A future `flush_remainder` flag or
+never-flush contract can wait until streaming/incomplete filesets need it.
 
 ### Type / API sketch
 
 ```text
 MergeBySizeRequest:
   files: tuple[SplitFile, ...]       # lfn + size required; events optional
-  min_output_file_size: int          # > 0
-  max_output_file_size: int          # >= min_output_file_size
-  # leftover below min: TBD (always-flush vs never-flush)
+  min_output_size_bytes: int          # > 0
+  max_output_size_bytes: int          # >= min_output_size_bytes
   rates: ResourceRates = ResourceRates()  # optional; see estimates note
   budgets: ResourceBudgets = ResourceBudgets()
 
 MergeBySizeSplitter(JobSplitter[MergeBySizeRequest])
 ```
 
-Module: `merge_by_size.py`.
+Module: `merge_by_size.py` (implemented).
 
-### Implementation order (when we start coding)
+### Implementation status
 
-1. `MergeBySizeRequest` with min/max validation + LFN-sorted greedy packer
-2. Tests: fill past min up to max; close when next exceeds max; single file
-   over max → alone (not unsplittable, pending open note); chosen leftover
-   policy; determinism; empty input
-3. Document estimate fields actually populated in v1
+v1 implemented: min/max validation, ``(-size, lfn)`` order with full-remainder
+fill toward ``max`` (``O(n^2)``), always-flush emits, oversize singleton as a
+normal one-file job, `n_events` + `network` via shared `make_job` /
+`estimates_for`.
 
 ### Open note: oversize single file vs `unsplittable`
 
@@ -972,7 +965,7 @@ unit” (e.g. skip HTCondor). For **merge**, that is a poor fit: the expensive
 processing step has already produced the large file, and refusing to merge it
 only strands data.
 
-**Provisional v1:** a file with `size > max_output_file_size` still becomes a
+**Provisional v1:** a file with `size > max_output_size_bytes` still becomes a
 **normal** one-file merge job (ceiling applies to combining files, not to
 rejecting an already-large input).
 
@@ -1023,8 +1016,8 @@ Do not implement configurable hooks until that decision is made.
 
 ### MergeBySize with contiguous run/lumi order
 
-v1 MergeBySize packs by **file size only** (LFN-sorted) within a min/max
-output-size band. A useful variant would still use that band, but prefer
+v1 MergeBySize packs by **file size** (sorted ``(-size, lfn)``, full-remainder
+fill toward max). A useful variant would still use that band, but prefer
 packing files whose `(run, lumi)` metadata form an **ascending, contiguous**
 pattern (better merge locality for consumers that care about run/lumi order).
 
