@@ -94,9 +94,11 @@ def make_job(
     reason: str | None = None,
 ) -> SplitJob:
     ordered = sorted(files, key=lambda f: f.lfn)
+    n_events = sum(f.events for f in ordered)
     return SplitJob(
         input_lfns=tuple(f.lfn for f in ordered),
         estimates=estimates_for(ordered, rates),
+        n_events=n_events,
         unsplittable=unsplittable,
         unsplittable_reason=reason,
     )
