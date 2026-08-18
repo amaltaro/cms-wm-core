@@ -117,9 +117,8 @@ prefer **multiple invocations** (one per group) over an in-algorithm
 enable/disable hook. An opaque optional `group_key` on files remains a
 possible future extension; it is not required for the first extract.
 
-Location metadata on files (whether replicas are local or remote) may still
-inform **estimates** (e.g. network) within a pre-scoped unit. That is file
-metadata, not Rucio hierarchy policy.
+Local vs remote replica choice is **late-binding**: matchmaking / execution,
+not job splitting. Splitters do not take per-file location hints.
 
 ## Determinism
 
@@ -193,8 +192,8 @@ request.
 
 Typical fields (not all required for every algorithm):
 
-- `lfn`, `events`, `size`, `first_event`
-- `locations` / locality hints (optional; network vs local read)
+- `lfn`, `events`, `size`
+- `first_event` (unused in v1; reserved for a future input-file EventBased)
 - `run_lumis`: list of `(run, lumi, events)` — can be very large; omit when
   unused
 - optional `parents` (LFNs already attached)
@@ -222,7 +221,7 @@ No required Rucio container/dataset fields on the core input.
   - wall time
   - scratch disk (transient + persisted; ± TBD input staging)
   - persisted / stage-out volume (subset of scratch)
-  - network (from input file sizes when remote read applies)
+  - network (sum of assigned input file sizes; not local-vs-remote)
 - optional creation-failure / unsplittable marker and reason
 - small baggage dict if needed
 

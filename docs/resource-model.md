@@ -80,16 +80,15 @@ tests must state which mode a fixture uses.
 
 ### Network estimate
 
-When a job may read input **remotely**, expose a network metric derived from
-input size, e.g.:
+Report an input-read volume from assigned work, e.g.:
 
 ```text
 estimated_network ≈ n_events × input_size_per_event
 ```
 
 or, equivalently, the sum of assigned input file sizes when reading whole
-files. Locality (all replicas local vs remote) is caller/file metadata; the
-splitter only computes the estimate when remote read is indicated or assumed.
+files. Local vs remote replica choice is left to later matchmaking
+(late-binding); the splitter reports input size, not a site-specific transfer.
 
 Network is an **output estimate** for planning and monitoring. Whether it
 also acts as a packing close condition is optional and algorithm-specific;

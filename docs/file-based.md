@@ -34,7 +34,7 @@ FileBased packs whole files into jobs. It is the first algorithm to extract.
 ### Input / output (FileBased-specific)
 
 **Input files:** required `lfn`, `events`, and `size` (size feeds the network
-estimate). `run_lumis` and `locations` are ignored if present.
+estimate). `run_lumis` is ignored if present.
 
 **Input request:** `files_per_job`, file tuple, `ResourceRates`, optional
 `ResourceBudgets`.
