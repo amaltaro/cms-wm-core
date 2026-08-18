@@ -43,14 +43,17 @@ class RunLumiRange:
 
 @dataclass(frozen=True)
 class SplitFile:
-    """One input file already resolved by the caller (no discovery here)."""
+    """One input file already resolved by the caller (no discovery here).
+
+    Unused by no-input EventBased (MC), which takes event/lumi offsets on the
+    request rather than files.
+    """
 
     lfn: str
     events: int
     size: int
+    # Unused in v1; reserved for a future input-file EventBased splitter.
     first_event: int = 0
-    # Optional locality hints; empty means "unspecified".
-    locations: frozenset[str] = field(default_factory=frozenset)
     # Run/lumi map; empty if the algorithm does not need it (e.g. FileBased).
     # Ordered for determinism (caller or splitter should sort stably).
     run_lumis: tuple[RunLumiEvents, ...] = ()
