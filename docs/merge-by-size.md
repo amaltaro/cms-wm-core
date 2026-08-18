@@ -102,7 +102,7 @@ at emit time — merge is treated as roughly size-preserving for packing.
 | --- | --- |
 | Location bucketing | **Omit** (pre-scoped input) |
 | Run / lumi grouping for merge order | **Omit** for v1 (not in upstream code
-  path; see Future work for a contiguous run/lumi variant) |
+  path; see [Future work: contiguous run/lumi order](#future-work-contiguous-runlumi-order)) |
 | WMBS / subscription / UUID job names | **Omit** |
 | Event masks on merge jobs | **Omit** unless a consumer requires a
   sentinel mask |
@@ -111,7 +111,7 @@ at emit time — merge is treated as roughly size-preserving for packing.
 
 ### Resource estimates and `n_events`
 
-Reminder (same model as elsewhere in this doc): **transient** output lives
+Reminder (same model as in [resource-model.md](resource-model.md)): **transient** output lives
 only on worker scratch; **persisted** output is written to scratch **and**
 staged to shared storage. Estimated scratch is always
 `transient + persisted` while the job runs.
@@ -180,3 +180,27 @@ rejecting an already-large input).
   (warning field, baggage, metrics) for ops visibility
 - Whether `max` should ever force-fail merge (probably not)
 - How merge job resource estimates should reflect an oversize singleton
+
+### Future work: contiguous run/lumi order
+
+v1 packs by **file size** (sorted ``(-size, lfn)``, full-remainder fill toward
+max). A useful variant would still use that band, but prefer packing files
+whose `(run, lumi)` metadata form an **ascending, contiguous** pattern (better
+merge locality for consumers that care about run/lumi order).
+
+**TODO:**
+
+- Require non-empty `run_lumis` on each input file (unlike size-only v1)
+- Define ordering (e.g. by min `(run, lumi)` per file) and what “contiguous”
+  means across file boundaries (adjacent lumis, same run, gaps allowed or not)
+- Keep the min/max size band as the primary close rule; use run/lumi order as
+  the walk / preference order, not a second independent quota — unless
+  product requirements demand hard run boundaries inside a merge job
+- Document interaction with FileLumiAware-style shared lumis (likely still
+  out of scope for merge, or co-located first)
+
+### Future work: oversize inputs — ops visibility
+
+v1 still merges a singleton oversize file. Future work may add non-blocking
+signaling (metrics / baggage) so operators can see merges that exceeded the
+configured max without failing the job in HTCondor.

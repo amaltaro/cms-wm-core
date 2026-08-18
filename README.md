@@ -10,7 +10,9 @@ Staging ground for a small set of algorithms extracted from
 [WMCore](https://github.com/dmwm/WMCore) / [T0](https://github.com/dmwm/T0),
 refactored and tested, then aimed at [DiracX](https://github.com/DIRACGrid/diracx).
 
-Job-splitting design: [docs/README.md](docs/README.md).
+Job-splitting design: [docs/README.md](docs/README.md)
+([architecture](docs/architecture.md),
+[resource model](docs/resource-model.md)).
 
 | Algorithm | Core idea | Docs |
 | --- | --- | --- |

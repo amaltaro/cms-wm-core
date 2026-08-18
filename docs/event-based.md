@@ -51,7 +51,8 @@ Require `time_per_event > 0`, `target_job_walltime > 0`, and
 | Upstream feature | Decision |
 | --- | --- |
 | Real input files split by events inside each file | **Omit** for v1;
-  revisit if MC lumis grow too large (see Future work) |
+  revisit if MC lumis grow too large (see
+  [Future work](#future-work-large-mc-lumis--input-datasets)) |
 | Emitting `MCFakeFile` LFNs | **Omit** (use job event/lumi fields) |
 | ACDC recovery path | **Omit** |
 | `include_parents`, location bucketing | **Omit** |
@@ -82,3 +83,31 @@ Each job carries:
 - `ResourceEstimates` for `n_events`
 
 Deterministic: increasing events and lumis with no gaps/overlaps in the slice.
+
+### Future work: large MC lumis / input datasets
+
+v1 is **no-input MC**: one unique lumi per job and a disjoint event range.
+That breaks down if a single MC luminosity section grows so large that one job
+cannot process all of its events in a reasonable walltime (or within
+infrastructure maxima).
+
+**TODO:** Reconsider extending EventBased (or a sibling algorithm) to work
+**with an input dataset** — splitting work inside an oversized lumi across
+multiple jobs (event ranges within that lumi), so packing stays within
+target/max walltime.
+
+**Open design questions** (especially if a later **merge** step must
+reassemble products):
+
+- Does the application/framework support event range or event offset?
+- Must event ranges assigned within one lumi be **contiguous** (and how are
+  gaps / failures represented)?
+- Must jobs that share a parent lumi emit masks or baggage that a merger can
+  consume without reordering surprises?
+- Do merge constraints require **contiguous lumis** as well as contiguous
+  events, or is per-lumi event-range merging enough?
+- How do unsplittable / partial failures interact with merge completeness?
+
+Record chosen invariants in the EventBased (or successor) module docstring
+when this is implemented. Until then, v1 keeps one lumi per job and assumes
+that lumi fits a single job’s resource budget.

@@ -8,7 +8,7 @@ Typical layout:
 * ``file_based`` / ``file_lumi_aware`` / ``event_based`` /
   ``event_aware_lumi`` / ``merge_by_size`` — concrete algorithms
 
-See ``docs/README.md`` for design invariants.
+See ``docs/README.md`` and ``docs/architecture.md`` for design invariants.
 """
 
 from cms_wm_core.job_splitting.base import JobSplitter

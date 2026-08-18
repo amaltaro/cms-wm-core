@@ -31,7 +31,7 @@ and
   create-failed / unsplittable job |
 | Boundary flags | `halt_job_on_file_boundaries`, `splitOnRun` — **open
   question** for cms-wm-core (see below /
-  [Future work](README.md#future-work--todo)) |
+  [Future work](future-work.md) |
 | Out-of-band concerns | Location buckets, ACDC / Couch whitelists, parents, deterministic
   pileup baggage, WMBS run–lumi DAO loads |
 
@@ -121,7 +121,7 @@ still combine fully-legacy and fully-known files.
 
 **v1 scope of work per file:** process **all** `(run, lumi)` entries present on
 each input file. There is no run/lumi allow-list yet; subsetting a file is
-Future work.
+[future work](#future-work-runlumi-allow-list).
 
 Jobs must list input LFNs plus a **run/lumi mask** of whole lumis assigned to
 that job. Execution consumes LFNs + mask; it does **not** need a separate
@@ -211,7 +211,8 @@ Mark oversized single-lumi jobs with `unsplittable=True` and a clear reason
 | ACDC / Couch clients and whitelist fetch | **Omit** (no service clients in
   the core library) |
 | Run/lumi allow-list (process a subset of a
-  file) | **Omit for v1** — pack every lumi on the input files; see Future work |
+  file) | **Omit for v1** — pack every lumi on the input files; see
+  [Future work: run/lumi allow-list](#future-work-runlumi-allow-list) |
 | WMBS DAO run–lumi load | **Omit**; `run_lumis` must already be on
   `SplitFile` |
 | `include_parents` | **Omit** for now |
@@ -246,8 +247,8 @@ packing, event/walltime targets).
    need both modes. Prefer not to carry unused WMCore flags “just in case.”
 
 Until decided: do **not** treat these as required request fields. Record the
-chosen default (or deferred configurability) under Future work / in the
-module docstring when implementing.
+chosen default (or deferred configurability) in the module docstring when
+implementing.
 
 ### Type / API sketch
 
@@ -287,3 +288,32 @@ jobs may span runs and files. Only the event-target close rule applies.
    metadata, reject shared multi-file lumi, oversized single lumi,
    determinism, and that `n_events` matches the packed lumi weights
    (plus run/file boundary cases once that open question is settled)
+
+### Future work: run / file boundary policy
+
+Resolve the open question above (are `splitOnRun` /
+`halt_job_on_file_boundaries` still needed?). Outcomes to record once decided:
+
+- **Drop** — pack only by event/walltime target; document that jobs may span
+  runs and/or files
+- **Fixed default** — one hard-coded policy in the algorithm (no request
+  knobs); document the invariant
+- **Configurable** — add explicit request flags only if callers need both
+  modes; keep names/semantics clear and tested
+
+Do not implement configurable hooks until that decision is made.
+
+### Future work: run/lumi allow-list
+
+v1 treats each file’s `run_lumis` as the full work set: every lumi on the
+file is eligible for packing.
+
+**TODO:** Allow the caller to restrict processing to a subset of
+`(run, lumi)` pairs (an allow-list / mask passed as **data**, not fetched from
+ACDC/Couch). Use cases include recovery, partial blocks, and skims over only
+selected lumis. Expected shape:
+
+- Request carries an optional set (or compact list) of allowed `(run, lumi)`
+- Only matching lumis from the input files are packed; others are skipped
+- Jobs still emit LFNs + masks for the **selected** work only
+- Keep discovery/persistence of that list outside the core algorithm
