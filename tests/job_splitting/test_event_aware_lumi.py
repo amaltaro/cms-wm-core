@@ -26,9 +26,14 @@ def _file(
     return SplitFile(lfn=lfn, events=events, size=size, run_lumis=run_lumis)
 
 
-def _rates(time_per_event: float = 1.0) -> ResourceRates:
+def _rates(
+    time_per_event: float = 1.0,
+    *,
+    input_size_per_event: float = 1.0,
+) -> ResourceRates:
     return ResourceRates(
         time_per_event=time_per_event,
+        input_size_per_event=input_size_per_event,
         transient_output_size_per_event=2.0,
         persisted_output_size_per_event=1.0,
     )
@@ -81,11 +86,11 @@ def test_known_events_closest_to_target():
     assert result.jobs[0].estimates.walltime == 80.0
     assert result.jobs[0].estimates.scratch_disk == 240.0
     assert result.jobs[0].estimates.persisted_output == 80.0
-    assert result.jobs[0].estimates.network == 100.0
+    assert result.jobs[0].estimates.network == 80.0
     assert result.jobs[1].estimates.walltime == 40.0
     assert result.jobs[1].estimates.scratch_disk == 120.0
     assert result.jobs[1].estimates.persisted_output == 40.0
-    assert result.jobs[1].estimates.network == 100.0
+    assert result.jobs[1].estimates.network == 40.0
 
 
 def test_known_events_overshoot_when_closer_to_target():
@@ -119,7 +124,7 @@ def test_known_events_overshoot_when_closer_to_target():
     assert result.jobs[0].estimates.walltime == 120.0
     assert result.jobs[0].estimates.scratch_disk == 360.0
     assert result.jobs[0].estimates.persisted_output == 120.0
-    assert result.jobs[0].estimates.network == 100.0
+    assert result.jobs[0].estimates.network == 120.0
 
 
 def test_legacy_none_uses_file_average():
@@ -292,9 +297,8 @@ def test_zero_event_lumis_pack_together():
     assert result.jobs[0].estimates.walltime == 0.0
     assert result.jobs[0].estimates.scratch_disk == 0.0
     assert result.jobs[0].estimates.persisted_output == 0.0
-    # Network is sum of assigned file sizes (default size=100), not scaled
-    # by n_events — the job still lists the input LFN.
-    assert result.jobs[0].estimates.network == 100.0
+    # Network scales with packed n_events × input_size_per_event (here 0).
+    assert result.jobs[0].estimates.network == 0.0
     assert result.jobs[0].input_lfns == ("/store/a.root",)
 
 
@@ -302,8 +306,8 @@ def test_name():
     assert EventAwareLumiSplitter().name == "EventAwareLumi"
 
 
-def test_resource_estimates_use_output_rates_and_file_size():
-    """Disk estimates scale with n_events; network uses assigned file size."""
+def test_resource_estimates_use_output_rates_and_input_size_per_event():
+    """Disk and network scale with packed n_events and rates (not file size)."""
     files = (
         _file(
             "/store/a.root",
@@ -316,7 +320,7 @@ def test_resource_estimates_use_output_rates_and_file_size():
         EventAwareLumiRequest(
             files=files,
             target_job_walltime=100.0,
-            rates=_rates(1.0),
+            rates=_rates(1.0, input_size_per_event=5.0),
         )
     )
     assert len(result.jobs) == 1
@@ -325,4 +329,4 @@ def test_resource_estimates_use_output_rates_and_file_size():
     assert estimates.walltime == 10.0
     assert estimates.scratch_disk == 30.0  # 10 × (2.0 + 1.0)
     assert estimates.persisted_output == 10.0  # 10 × 1.0
-    assert estimates.network == 50.0
+    assert estimates.network == 50.0  # 10 × 5.0 (not file size)
