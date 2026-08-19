@@ -221,7 +221,7 @@ No required Rucio container/dataset fields on the core input.
   - wall time
   - scratch disk (transient + persisted; ± TBD input staging)
   - persisted / stage-out volume (subset of scratch)
-  - network (sum of assigned input file sizes; not local-vs-remote)
+  - network (**input** read volume only; see [resource-model](resource-model.md#network-estimate))
 - optional creation-failure / unsplittable marker and reason
 - small baggage dict if needed
 

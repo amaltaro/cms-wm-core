@@ -118,7 +118,7 @@ staged to shared storage. Estimated scratch is always
 
 Merge jobs are I/O-heavy. Proposed v1:
 
-- **`network`**: sum of assigned input file sizes (read volume)
+- **`network`**: sum of assigned input file sizes (input read volume only)
 - **`n_events`**: sum of file-level `events` when present (characterization)
 - **`transient_output_size_per_event`**: forced to **0** — merge has no
   scratch-only product; the merge output is persisted (shared storage). Callers

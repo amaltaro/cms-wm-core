@@ -80,19 +80,25 @@ tests must state which mode a fixture uses.
 
 ### Network estimate
 
-Report an input-read volume from assigned work, e.g.:
+``ResourceEstimates.network`` is **input-read volume only** (primary input
+bytes expected to be read). It does **not** include stage-out / output
+network; that can reuse ``persisted_output`` later (see
+[future-work.md](future-work.md)).
 
-```text
-estimated_network ≈ n_events × input_size_per_event
-```
+How input network is derived depends on the packing unit:
 
-or, equivalently, the sum of assigned input file sizes when reading whole
-files. Local vs remote replica choice is left to later matchmaking
-(late-binding); the splitter reports input size, not a site-specific transfer.
+| Algorithms | Input network |
+| --- | --- |
+| FileBased, LumiAwareFile, MergeBySize | Sum of assigned input file ``size`` (whole files) |
+| EventAwareLumi | ``n_events × input_size_per_event`` (fractional file work) |
+| EventBased | ``0`` until real input and/or pileup are modeled |
 
-Network is an **output estimate** for planning and monitoring. Whether it
-also acts as a packing close condition is optional and algorithm-specific;
-wall time and scratch remain the primary resource close drivers.
+Local vs remote replica choice is left to later matchmaking (late-binding);
+the splitter reports a volume, not a site-specific transfer.
+
+Network is an **estimate for planning and monitoring**. Whether it also acts
+as a packing close condition is optional and algorithm-specific; wall time
+and scratch remain the primary resource close drivers.
 
 ### Who supplies what (common resource inputs)
 

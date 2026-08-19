@@ -71,7 +71,8 @@ Require `time_per_event > 0`, `target_job_walltime > 0`, and
 | `first_lumi` | First job lumi id (default `1`) |
 | `ResourceBudgets` maxima | Optional hard caps / unsplittable |
 
-No `SplitFile` list. Network estimate is **0**.
+No `SplitFile` list. Input ``network`` estimate is **0** (no primary input;
+pileup / future input-file EventBased may change this).
 
 ### v1 output
 

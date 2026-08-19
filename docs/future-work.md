@@ -41,9 +41,10 @@ CMS jobs often read **pileup** datasets in addition to primary input (or, for
 MC EventBased, in addition to generating events with no primary input files).
 Pileup can dominate remote I/O.
 
-Today `ResourceEstimates.network` is:
+Today `ResourceEstimates.network` is **input-read volume only**:
 
-- FileBased / LumiAwareFile: sum of primary input file sizes
+- FileBased / LumiAwareFile / MergeBySize: sum of primary input file sizes
+- EventAwareLumi: `n_events × input_size_per_event`
 - EventBased: `0` (no primary input)
 
 **TODO:** Factor pileup into job resource estimates so matchmaking /
@@ -60,6 +61,13 @@ provisioning see realistic network (and related) demand. At minimum:
 Without this, the WMS under-characterizes network activity and the underlying
 resource provisioning / matchmaking stack lacks information needed for sound
 resource-vs-job matching.
+
+### Output / stage-out network
+
+``ResourceEstimates.network`` does not yet include bytes written to shared
+storage. ``persisted_output`` already estimates that stage-out volume; a later
+revision may expose output network explicitly (or document that callers add
+``persisted_output`` to input ``network`` for total transfer planning).
 
 ### HEPScore-normalized work and Dirac / DiracX alignment
 

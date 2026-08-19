@@ -131,7 +131,10 @@ same average-based estimate used for packing). That figure characterizes the
 job and is the natural input to resource estimates (`n_events × rates`).
 
 Resource estimates therefore follow from the recorded event total, not from
-re-deriving it later from masks unless a caller chooses to.
+re-deriving it later from masks unless a caller chooses to. Input
+``network`` is ``n_events × input_size_per_event`` (not whole-file size),
+because a job may process only a subset of each file’s lumis. See
+[resource-model](resource-model.md#network-estimate).
 
 ### What drives splitting
 
