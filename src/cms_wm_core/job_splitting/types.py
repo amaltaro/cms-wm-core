@@ -90,6 +90,11 @@ class ResourceEstimates:
     ``scratch_disk`` is peak local disk while the job runs (transient plus
     persisted outputs). ``persisted_output`` is the subset that must be staged
     out after processing; it is already included in ``scratch_disk``.
+
+    ``network`` is **input-read volume only** (primary input). How it is
+    derived depends on the algorithm: whole-file splitters sum assigned file
+    ``size``; event/lumi packers use ``n_events × input_size_per_event``.
+    Stage-out / output network is not included yet (see future work).
     """
 
     walltime: float = 0.0

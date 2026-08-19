@@ -210,7 +210,10 @@ class EventAwareLumiSplitter(JobSplitter[EventAwareLumiRequest]):
         if not state.current_lumis and not state.current_files:
             return
         file_list = sorted(state.current_files.values(), key=lambda f: f.lfn)
-        network = float(sum(f.size for f in file_list))
+        # Input network from packed work, not whole-file size (partial files).
+        network = float(
+            state.events_in_job * state.rates.input_size_per_event
+        )
         estimates = estimates_for_events(
             state.events_in_job,
             state.rates,
@@ -241,7 +244,7 @@ class EventAwareLumiSplitter(JobSplitter[EventAwareLumiRequest]):
         alone = estimates_for_events(
             unit.events,
             state.rates,
-            network=float(unit.file.size),
+            network=float(unit.events * state.rates.input_size_per_event),
         )
         alone_reason = exceeds_maximum(alone, state.budgets)
         if alone_reason is not None:
