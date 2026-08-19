@@ -42,8 +42,8 @@ RunLumiKey = tuple[int, int]
 
 
 @dataclass(frozen=True)
-class FileLumiAwareRequest:
-    """Inputs for :class:`FileLumiAwareSplitter`."""
+class LumiAwareFileRequest:
+    """Inputs for :class:`LumiAwareFileSplitter`."""
 
     files: tuple[SplitFile, ...]
     files_per_job: int
@@ -100,14 +100,14 @@ def _connected_components(
     return components
 
 
-class FileLumiAwareSplitter(JobSplitter[FileLumiAwareRequest]):
+class LumiAwareFileSplitter(JobSplitter[LumiAwareFileRequest]):
     """FileBased packing that never splits a shared (run, lumi) across jobs."""
 
     @property
     def name(self) -> str:
-        return "FileLumiAware"
+        return "LumiAwareFile"
 
-    def split(self, request: FileLumiAwareRequest) -> SplitResult:
+    def split(self, request: LumiAwareFileRequest) -> SplitResult:
         if request.files_per_job < 1:
             raise ValueError(
                 f"files_per_job must be >= 1, got {request.files_per_job}"
@@ -117,7 +117,7 @@ class FileLumiAwareSplitter(JobSplitter[FileLumiAwareRequest]):
             if not file_.run_lumis:
                 raise ValueError(
                     f"file {file_.lfn!r} has empty run_lumis; "
-                    "FileLumiAware requires at least one (run, lumi)"
+                    "LumiAwareFile requires at least one (run, lumi)"
                 )
 
         components = _connected_components(request.files)

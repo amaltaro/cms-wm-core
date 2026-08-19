@@ -172,7 +172,7 @@ Under `src/cms_wm_core/job_splitting/`:
 | `base.py` | `JobSplitter` ABC — subclasses must implement `name` and `split` |
 | `file_common.py` | Shared estimate / validation helpers |
 | `file_based.py` | [FileBased](file-based.md) + `FileBasedRequest` |
-| `file_lumi_aware.py` | [FileLumiAware](file-lumi-aware.md) + `FileLumiAwareRequest` |
+| `lumi_aware_file.py` | [LumiAwareFile](lumi-aware-file.md) + `LumiAwareFileRequest` |
 | `event_based.py` | [EventBased](event-based.md) + `EventBasedRequest` |
 | `event_aware_lumi.py` | [EventAwareLumi](event-aware-lumi.md) + `EventAwareLumiRequest` |
 | `merge_by_size.py` | [MergeBySize](merge-by-size.md) + `MergeBySizeRequest` |

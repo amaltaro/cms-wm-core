@@ -16,7 +16,7 @@ the caller (workload / site / pilot policy), not from discovery services.
 
 Algorithm-specific targets remain the usual close triggers, for example:
 
-- `files_per_job` (FileBased, FileLumiAware)
+- `files_per_job` (FileBased, LumiAwareFile)
 - `events_per_job` (EventBased, EventAwareLumi)
 - optional boundary rules (halt on file/run boundaries, fileset closed, …)
 

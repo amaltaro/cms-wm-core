@@ -116,7 +116,7 @@ class SplitJob:
     # Half-open event range start (EventBased); None when unused.
     first_event: int | None = None
     # Assigned / estimated event total for characterization and estimates.
-    # FileBased / FileLumiAware: sum of file ``events``.
+    # FileBased / LumiAwareFile: sum of file ``events``.
     # EventBased: generated range length.
     # EventAwareLumi: sum of packed lumi weights.
     n_events: int | None = None

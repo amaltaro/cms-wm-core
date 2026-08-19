@@ -15,7 +15,7 @@ accumulate one or more lumis. Packing closes before the next lumi when adding
 it would not get closer to the event target (ByWork closest-to-target rule).
 
 Each ``(run, lumi)`` must appear in exactly one input file. Workflows that
-share the same run/lumi across files must use :class:`FileLumiAwareSplitter`
+share the same run/lumi across files must use :class:`LumiAwareFileSplitter`
 instead — that is the only algorithm that supports that case.
 
 v1: process every lumi on each input file (no allow-list); no run/file
@@ -109,7 +109,7 @@ def _build_work_units(files: tuple[SplitFile, ...]) -> list[_WorkUnit]:
 
     Sorts files by LFN and lumis within each file so packing order is
     deterministic. Also rejects a ``(run, lumi)`` that appears in more than
-    one file (FileLumiAware-only case).
+    one file (LumiAwareFile-only case).
 
     Note: that cross-file uniqueness scan is a safety check. If callers
     always guarantee one file per ``(run, lumi)`` and this becomes a
@@ -130,7 +130,7 @@ def _build_work_units(files: tuple[SplitFile, ...]) -> list[_WorkUnit]:
                     f"run/lumi {key} appears in both "
                     f"{lfn_by_run_lumi[key]!r} and {file_.lfn!r}; "
                     "EventAwareLumi requires each (run, lumi) in a single "
-                    "file (use FileLumiAware for shared lumis)"
+                    "file (use LumiAwareFile for shared lumis)"
                 )
             lfn_by_run_lumi[key] = file_.lfn
             units.append(

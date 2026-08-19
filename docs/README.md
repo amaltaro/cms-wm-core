@@ -51,7 +51,7 @@ Summarized here; rationale and detail in [architecture.md](architecture.md).
 | Algorithm | Core idea | Detail |
 | --- | --- | --- |
 | FileBased | Pack whole files by `files_per_job` | [file-based.md](file-based.md) |
-| FileLumiAware | FileBased + co-locate shared `(run, lumi)` | [file-lumi-aware.md](file-lumi-aware.md) |
+| LumiAwareFile | FileBased + co-locate shared `(run, lumi)` | [lumi-aware-file.md](lumi-aware-file.md) |
 | EventBased | No-input MC; disjoint events / unique lumis | [event-based.md](event-based.md) |
 | EventAwareLumi | Pack `(run, lumi)` work by event/walltime target | [event-aware-lumi.md](event-aware-lumi.md) |
 | MergeBySize | Merge by min/max output size band | [merge-by-size.md](merge-by-size.md) |

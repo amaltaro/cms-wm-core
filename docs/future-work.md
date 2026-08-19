@@ -9,7 +9,7 @@ Part of the [job-splitting design](README.md).
 ## Planned extract order
 
 1. **FileBased** — [detail](file-based.md)
-2. **FileLumiAware** — [detail](file-lumi-aware.md)
+2. **LumiAwareFile** — [detail](lumi-aware-file.md)
 3. **EventBased** — [detail](event-based.md)
 4. **EventAwareLumi** — [detail](event-aware-lumi.md)
 5. **MergeBySize** — [detail](merge-by-size.md)
@@ -43,7 +43,7 @@ Pileup can dominate remote I/O.
 
 Today `ResourceEstimates.network` is:
 
-- FileBased / FileLumiAware: sum of primary input file sizes
+- FileBased / LumiAwareFile: sum of primary input file sizes
 - EventBased: `0` (no primary input)
 
 **TODO:** Factor pileup into job resource estimates so matchmaking /

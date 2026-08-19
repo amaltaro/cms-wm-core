@@ -9,7 +9,7 @@ location-consistent file list; this algorithm does not bucket by site.
 Intentionally omitted (see ``docs/file-based.md``):
 
 * location sorting / multi-site job groups
-* run / lumi masks and run boundaries (use ``file_lumi_aware`` instead)
+* run / lumi masks and run boundaries (use ``lumi_aware_file`` instead)
 * ``jobs_per_group`` (persistence packaging, not packing math)
 * ``include_parents`` / parent LFN resolution (deferred)
 * memory requirements on jobs

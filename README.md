@@ -17,7 +17,7 @@ Job-splitting design: [docs/README.md](docs/README.md)
 | Algorithm | Core idea | Docs |
 | --- | --- | --- |
 | FileBased | Pack by `files_per_job` | [detail](docs/file-based.md) |
-| FileLumiAware | Co-locate shared `(run, lumi)` | [detail](docs/file-lumi-aware.md) |
+| LumiAwareFile | Co-locate shared `(run, lumi)` | [detail](docs/lumi-aware-file.md) |
 | EventBased | No-input MC event/lumi ranges | [detail](docs/event-based.md) |
 | EventAwareLumi | Pack lumis by event/walltime | [detail](docs/event-aware-lumi.md) |
 | MergeBySize | Merge by min/max size band | [detail](docs/merge-by-size.md) |

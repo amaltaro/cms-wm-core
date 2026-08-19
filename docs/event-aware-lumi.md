@@ -174,11 +174,11 @@ unlimited / take remaining lumis” only where tests justify it.
 
 ### Cross-file `(run, lumi)`
 
-**Invariant:** outside the special FileLumiAware workflow, each
+**Invariant:** outside the special LumiAwareFile workflow, each
 `(run, lumi)` lives in **exactly one** file. EventAwareLumi work units are
 therefore `(run, lumi)` **on a single file**. If the same key appears in more
 than one input file, EventAwareLumi raises; the caller must use
-**FileLumiAware** for that workflow (the only algorithm that co-locates
+**LumiAwareFile** for that workflow (the only algorithm that co-locates
 shared lumis under file-count packing).
 
 ### Job output shape (gap vs current types)

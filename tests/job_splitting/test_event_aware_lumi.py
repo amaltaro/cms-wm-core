@@ -171,7 +171,7 @@ def test_mixed_known_and_legacy_in_one_file_rejected():
 
 
 def test_shared_lumi_across_files_rejected():
-    """Shared (run, lumi) is FileLumiAware-only; EventAwareLumi must fail."""
+    """Shared (run, lumi) is LumiAwareFile-only; EventAwareLumi must fail."""
     files = (
         _file(
             "/store/b.root",
@@ -186,7 +186,7 @@ def test_shared_lumi_across_files_rejected():
             run_lumis=(RunLumiEvents(1, 1, 30),),
         ),
     )
-    with pytest.raises(ValueError, match="FileLumiAware"):
+    with pytest.raises(ValueError, match="LumiAwareFile"):
         EventAwareLumiSplitter().split(
             EventAwareLumiRequest(
                 files=files,

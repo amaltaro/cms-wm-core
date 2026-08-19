@@ -1,10 +1,10 @@
-"""Tests for FileLumiAwareSplitter."""
+"""Tests for LumiAwareFileSplitter."""
 
 import pytest
 
 from cms_wm_core.job_splitting import (
-    FileLumiAwareRequest,
-    FileLumiAwareSplitter,
+    LumiAwareFileRequest,
+    LumiAwareFileSplitter,
     ResourceBudgets,
     ResourceRates,
     RunLumiEvents,
@@ -17,7 +17,7 @@ def _rl(*pairs: tuple[int, int]) -> tuple[RunLumiEvents, ...]:
 
 
 def test_splitter_name():
-    assert FileLumiAwareSplitter().name == "FileLumiAware"
+    assert LumiAwareFileSplitter().name == "LumiAwareFile"
 
 
 def test_shared_run_lumi_keeps_files_in_same_job():
@@ -36,8 +36,8 @@ def test_shared_run_lumi_keeps_files_in_same_job():
             run_lumis=_rl((1, 2), (1, 3)),
         ),
     )
-    jobs = FileLumiAwareSplitter().split(
-        FileLumiAwareRequest(files=files, files_per_job=1)
+    jobs = LumiAwareFileSplitter().split(
+        LumiAwareFileRequest(files=files, files_per_job=1)
     ).jobs
 
     assert len(jobs) == 1
@@ -56,8 +56,8 @@ def test_transitive_sharing_forms_one_component():
             lfn="/store/c.root", events=1, size=10, run_lumis=_rl((1, 2))
         ),
     )
-    jobs = FileLumiAwareSplitter().split(
-        FileLumiAwareRequest(files=files, files_per_job=1)
+    jobs = LumiAwareFileSplitter().split(
+        LumiAwareFileRequest(files=files, files_per_job=1)
     ).jobs
     assert len(jobs) == 1
     assert jobs[0].input_lfns == (
@@ -79,8 +79,8 @@ def test_disjoint_lumis_can_split_across_jobs():
             lfn="/store/c.root", events=1, size=10, run_lumis=_rl((2, 1))
         ),
     )
-    jobs = FileLumiAwareSplitter().split(
-        FileLumiAwareRequest(files=files, files_per_job=1)
+    jobs = LumiAwareFileSplitter().split(
+        LumiAwareFileRequest(files=files, files_per_job=1)
     ).jobs
     assert len(jobs) == 3
     assert jobs[0].input_lfns == ("/store/a.root",)
@@ -100,8 +100,8 @@ def test_packs_components_up_to_files_per_job():
             lfn="/store/c.root", events=1, size=10, run_lumis=_rl((3, 1))
         ),
     )
-    jobs = FileLumiAwareSplitter().split(
-        FileLumiAwareRequest(files=files, files_per_job=2)
+    jobs = LumiAwareFileSplitter().split(
+        LumiAwareFileRequest(files=files, files_per_job=2)
     ).jobs
     assert len(jobs) == 2
     assert jobs[0].input_lfns == ("/store/a.root", "/store/b.root")
@@ -125,8 +125,8 @@ def test_does_not_break_component_to_satisfy_files_per_job():
     )
     # After packing a alone (1 file), b+c is a 2-file component; with
     # files_per_job=2 it still fits in a new job as one unit.
-    jobs = FileLumiAwareSplitter().split(
-        FileLumiAwareRequest(files=files, files_per_job=2)
+    jobs = LumiAwareFileSplitter().split(
+        LumiAwareFileRequest(files=files, files_per_job=2)
     ).jobs
     assert len(jobs) == 2
     assert jobs[0].input_lfns == ("/store/a.root",)
@@ -135,8 +135,8 @@ def test_does_not_break_component_to_satisfy_files_per_job():
 
 def test_empty_run_lumis_rejected():
     with pytest.raises(ValueError, match="empty run_lumis"):
-        FileLumiAwareSplitter().split(
-            FileLumiAwareRequest(
+        LumiAwareFileSplitter().split(
+            LumiAwareFileRequest(
                 files=(
                     SplitFile(lfn="/store/a.root", events=1, size=10),
                 ),
@@ -160,8 +160,8 @@ def test_component_over_max_walltime_is_unsplittable():
             run_lumis=_rl((1, 1)),
         ),
     )
-    jobs = FileLumiAwareSplitter().split(
-        FileLumiAwareRequest(
+    jobs = LumiAwareFileSplitter().split(
+        LumiAwareFileRequest(
             files=files,
             files_per_job=10,
             rates=ResourceRates(time_per_event=1.0),
@@ -189,8 +189,8 @@ def test_component_with_resource_budgets():
             run_lumis=_rl((1, 2)),
         ),
     )
-    jobs = FileLumiAwareSplitter().split(
-        FileLumiAwareRequest(
+    jobs = LumiAwareFileSplitter().split(
+        LumiAwareFileRequest(
             files=files,
             files_per_job=10,
             rates=ResourceRates(time_per_event=1.0),
@@ -214,6 +214,6 @@ def test_deterministic_for_same_input():
             lfn="/store/a.root", events=1, size=10, run_lumis=_rl((1, 1))
         ),
     )
-    request = FileLumiAwareRequest(files=files, files_per_job=5)
-    splitter = FileLumiAwareSplitter()
+    request = LumiAwareFileRequest(files=files, files_per_job=5)
+    splitter = LumiAwareFileSplitter()
     assert splitter.split(request) == splitter.split(request)

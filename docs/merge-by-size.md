@@ -196,7 +196,7 @@ merge locality for consumers that care about run/lumi order).
 - Keep the min/max size band as the primary close rule; use run/lumi order as
   the walk / preference order, not a second independent quota — unless
   product requirements demand hard run boundaries inside a merge job
-- Document interaction with FileLumiAware-style shared lumis (likely still
+- Document interaction with LumiAwareFile-style shared lumis (likely still
   out of scope for merge, or co-located first)
 
 ### Future work: oversize inputs — ops visibility
