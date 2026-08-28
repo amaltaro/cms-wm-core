@@ -69,6 +69,32 @@ storage. ``persisted_output`` already estimates that stage-out volume; a later
 revision may expose output network explicitly (or document that callers add
 ``persisted_output`` to input ``network`` for total transfer planning).
 
+### OpenTelemetry observability
+
+Job splitters are pure packing today: callers see only the returned
+``SplitResult``. That is fine for unit tests, but in production the upper
+layer (orchestrator, DiracX service, …) and monitoring stacks cannot see
+what happened inside ``split`` without re-deriving it from inputs/outputs.
+
+**TODO:** Add optional [OpenTelemetry](https://opentelemetry.io/)
+instrumentation so splitters are not a black box. Direction:
+
+- Emit a span (and/or metrics) per ``split`` call with stable attributes such
+  as algorithm ``name``, input scale (file count, total events, lumi count),
+  output scale (job count, unsplittable count), and wall time of the pack
+- Prefer **aggregates and counters** over dumping full LFN lists or run/lumi
+  maps into span attributes (those can be huge and hurt WM process memory /
+  exporter cost)
+- Keep packing math free of vendor SDKs: use the OTel API with a no-op
+  provider when unset, or an optional extra / thin instrumentation wrapper so
+  core install stays dependency-light
+- Align attribute naming and context propagation with whatever DiracX (or the
+  caller) already uses for traces, so a request can be followed from workflow
+  intake through splitting into job enqueue
+
+Until then, observability stops at the library boundary; callers must log or
+trace around ``split`` themselves.
+
 ### HEPScore-normalized work and Dirac / DiracX alignment
 
 Wall-clock estimates today use a raw `time_per_event` rate. That rate depends
