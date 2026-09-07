@@ -40,11 +40,17 @@ Defaults: `first_event = 1`, `first_lumi = 1`.
 integer:
 
 ```text
-events_per_job = floor(target_job_walltime / time_per_event)
+wall_s_per_event =
+  hepscore23_s_per_event / baseline_hs23_per_core   # when both > 0
+  else time_per_event                                 # legacy
+
+events_per_job = floor(target_job_walltime / wall_s_per_event)
 ```
 
-Require `time_per_event > 0`, `target_job_walltime > 0`, and
-`events_per_job >= 1`.
+Prefer HEPScore23 when both rate fields are set; otherwise require
+`time_per_event > 0`. Always require `target_job_walltime > 0` and
+`events_per_job >= 1`. Partial HS23 config (only one of the two fields)
+is rejected. See [HEPScore23](hepscore23.md).
 
 ### What WMCore EventBased also does (out of scope for v1)
 
@@ -65,7 +71,8 @@ Require `time_per_event > 0`, `target_job_walltime > 0`, and
 | --- | --- |
 | `total_events` | Events to generate in this request/slice |
 | `target_job_walltime` | Soft packing goal; drives `events_per_job` |
-| `ResourceRates.time_per_event` | Required; used with walltime to size jobs |
+| `ResourceRates` timing | HS23 pair (`hepscore23_s_per_event` +
+  `baseline_hs23_per_core`) **or** legacy `time_per_event` |
 | Output size rates | Scratch / stage-out estimates |
 | `first_event` | Event-range start (default `1`) |
 | `first_lumi` | First job lumi id (default `1`) |
@@ -82,6 +89,8 @@ Each job carries:
 - `first_event` + `n_events` (half-open range)
 - `lumi` (unique integer for that job)
 - `ResourceEstimates` for `n_events`
+- `expected_hs23_s` when packed with HEPScore23 rates
+  (`n_events × hepscore23_s_per_event`); else `None`
 
 Deterministic: increasing events and lumis with no gaps/overlaps in the slice.
 

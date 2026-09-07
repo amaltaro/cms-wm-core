@@ -4,8 +4,10 @@ Design notes for moving cms-wm-core packing from opaque wall-clock
 ``time_per_event`` to **HEPScore23·seconds per event**, while still targeting
 a wall-clock job duration (CMS often aims for ~12 h).
 
-Part of the [job-splitting design](README.md). Implementation is **not** in
-tree yet; see [future-work](future-work.md#hepscore23-normalized-packing).
+Part of the [job-splitting design](README.md). Helpers live in
+``job_splitting.hepscore``; **EventBased** uses them for packing today.
+Other algorithms still use legacy ``time_per_event`` until migrated
+(see [future-work](future-work.md#hepscore23-normalized-packing)).
 
 ---
 
@@ -223,13 +225,17 @@ corepower moving to HS23/core after WLCG adoption).
 - ATLAS also runs HS23 via HammerCloud/PanDA to validate declared vs runtime
   corepower ([arXiv:2502.04853](https://arxiv.org/abs/2502.04853)).
 
-## First implementation goals (when coding starts)
+## Implementation status
 
-1. Accept ``hepscore23_s_per_event`` + ``baseline_hs23_per_core`` (and keep
-   ``target_job_walltime``)
-2. Derive ``events_per_job`` / close conditions via the formulas above
-   (1-core baseline first)
-3. Expose expected job work in HS23·s on the result for matchmaking /
-   monitoring
-4. Defer site averages, ``ε``, safety margins, and match-time rescaling until
-   callers need them
+| Piece | Status |
+| --- | --- |
+| ``ResourceRates.hepscore23_s_per_event`` /
+  ``baseline_hs23_per_core`` | Done |
+| ``wall_seconds_per_event`` / ``get_expected_hs23_s`` helpers | Done |
+| ``SplitJob.expected_hs23_s`` | Done |
+| [EventBased](event-based.md) packing via HS23 or legacy | Done |
+| EventAwareLumi / FileBased / LumiAwareFile / MergeBySize | Still
+  legacy ``time_per_event`` (migrate one at a time) |
+| Multi-core ``ε``, site HS23, match-time rescaling | Deferred |
+
+First cut keeps 1-core, ``ε = 1``, baseline-only packing.
