@@ -195,3 +195,58 @@ def test_soft_target_walltime_closes_job_early():
         ("/store/b.root",),
         ("/store/c.root",),
     ]
+    assert all(job.expected_hs23_s is None for job in jobs)
+
+
+def test_hepscore23_walltime_and_expected_work():
+    # wall_s/event = 20 / 10 = 2; one file with 5 events → walltime 10
+    rates = ResourceRates(
+        hepscore23_s_per_event=20.0,
+        baseline_hs23_per_core=10.0,
+    )
+    jobs = FileBasedSplitter().split(
+        FileBasedRequest(
+            files=_files(("/store/a.root", 5, 50), ("/store/b.root", 3, 30)),
+            files_per_job=2,
+            rates=rates,
+        )
+    ).jobs
+    assert len(jobs) == 1
+    assert jobs[0].n_events == 8
+    assert jobs[0].estimates.walltime == 16.0
+    assert jobs[0].expected_hs23_s == 160.0  # 8 × 20
+    assert jobs[0].estimates.network == 80.0
+
+
+def test_hepscore23_preferred_over_legacy_for_soft_close():
+    # HS23 → 2 s/event; legacy 100 s/event would close differently
+    rates = ResourceRates(
+        time_per_event=100.0,
+        hepscore23_s_per_event=20.0,
+        baseline_hs23_per_core=10.0,
+    )
+    jobs = FileBasedSplitter().split(
+        FileBasedRequest(
+            files=_files(
+                ("/store/a.root", 5, 50),
+                ("/store/b.root", 5, 50),
+            ),
+            files_per_job=10,
+            rates=rates,
+            budgets=ResourceBudgets(target_job_walltime=10.0),
+        )
+    ).jobs
+    assert len(jobs) == 2
+    assert jobs[0].estimates.walltime == 10.0
+    assert jobs[0].expected_hs23_s == 100.0
+
+
+def test_partial_hepscore23_rates_rejected():
+    with pytest.raises(ValueError, match="both be > 0"):
+        FileBasedSplitter().split(
+            FileBasedRequest(
+                files=_files(("/store/a.root", 1, 10)),
+                files_per_job=1,
+                rates=ResourceRates(hepscore23_s_per_event=20.0),
+            )
+        )
