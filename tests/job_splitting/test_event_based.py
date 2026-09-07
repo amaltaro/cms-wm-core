@@ -148,3 +148,86 @@ def test_rejects_invalid_first_event_or_lumi():
                 first_lumi=0,
             )
         )
+
+
+def test_legacy_path_leaves_expected_hs23_s_none():
+    jobs = EventBasedSplitter().split(
+        EventBasedRequest(
+            total_events=5,
+            target_job_walltime=5.0,
+            rates=_rates(),
+        )
+    ).jobs
+    assert len(jobs) == 1
+    assert all(j.expected_hs23_s is None for j in jobs)
+
+
+def test_hepscore23_packing_and_expected_work():
+    # wall_s/event = 20 / 10 = 2; floor(10/2) = 5 events/job
+    rates = ResourceRates(
+        hepscore23_s_per_event=20.0,
+        baseline_hs23_per_core=10.0,
+        transient_output_size_per_event=1.0,
+    )
+    jobs = EventBasedSplitter().split(
+        EventBasedRequest(
+            total_events=12,
+            target_job_walltime=10.0,
+            rates=rates,
+        )
+    ).jobs
+    assert len(jobs) == 3
+    assert (jobs[0].n_events, jobs[0].estimates.walltime) == (5, 10.0)
+    assert jobs[0].expected_hs23_s == 100.0  # 5 × 20
+    assert jobs[1].expected_hs23_s == 100.0
+    assert jobs[2].n_events == 2
+    assert jobs[2].expected_hs23_s == 40.0
+    assert jobs[2].estimates.walltime == 4.0
+
+
+def test_hepscore23_preferred_over_legacy_time_per_event():
+    rates = ResourceRates(
+        time_per_event=100.0,  # would yield floor(10/100)=0 → error if used
+        hepscore23_s_per_event=20.0,
+        baseline_hs23_per_core=10.0,
+    )
+    jobs = EventBasedSplitter().split(
+        EventBasedRequest(
+            total_events=5,
+            target_job_walltime=10.0,
+            rates=rates,
+        )
+    ).jobs
+    assert len(jobs) == 1
+    assert jobs[0].n_events == 5
+    assert jobs[0].expected_hs23_s == 100.0
+
+
+def test_partial_hepscore23_rates_rejected():
+    with pytest.raises(ValueError, match="both be > 0"):
+        EventBasedSplitter().split(
+            EventBasedRequest(
+                total_events=1,
+                target_job_walltime=10.0,
+                rates=ResourceRates(hepscore23_s_per_event=20.0),
+            )
+        )
+    with pytest.raises(ValueError, match="both be > 0"):
+        EventBasedSplitter().split(
+            EventBasedRequest(
+                total_events=1,
+                target_job_walltime=10.0,
+                rates=ResourceRates(baseline_hs23_per_core=10.0),
+            )
+        )
+
+
+def test_requires_some_timing_rate():
+    with pytest.raises(ValueError, match="time_per_event"):
+        EventBasedSplitter().split(
+            EventBasedRequest(
+                total_events=1,
+                target_job_walltime=10.0,
+                rates=ResourceRates(),
+            )
+        )
