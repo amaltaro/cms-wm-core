@@ -6,7 +6,10 @@ package API (not re-exported from ``__init__``).
 
 from __future__ import annotations
 
-from cms_wm_core.job_splitting.hepscore import wall_seconds_per_event
+from cms_wm_core.job_splitting.hepscore import (
+    get_expected_hs23_s,
+    wall_seconds_per_event,
+)
 from cms_wm_core.job_splitting.types import (
     ResourceBudgets,
     ResourceEstimates,
@@ -101,6 +104,7 @@ def make_job(
         input_lfns=tuple(f.lfn for f in ordered),
         estimates=estimates_for(ordered, rates),
         n_events=n_events,
+        expected_hs23_s=get_expected_hs23_s(n_events, rates),
         unsplittable=unsplittable,
         unsplittable_reason=reason,
     )

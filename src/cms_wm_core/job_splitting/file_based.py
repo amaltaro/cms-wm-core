@@ -3,7 +3,10 @@
 Ported and simplified from WMCore ``FileBased``:
 https://github.com/dmwm/WMCore/blob/master/src/python/WMCore/JobSplitting/FileBased.py
 
-Packs whole files into jobs using ``files_per_job``. The caller must supply a
+Packs whole files into jobs using ``files_per_job``. Walltime estimates and
+soft/hard closes use HEPScore23 rates when set
+(``hepscore23_s_per_event / baseline_hs23_per_core``), else legacy
+``time_per_event`` (see ``docs/hepscore23.md``). The caller must supply a
 location-consistent file list; this algorithm does not bucket by site.
 
 Intentionally omitted (see ``docs/file-based.md``):
