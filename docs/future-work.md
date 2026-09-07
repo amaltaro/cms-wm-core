@@ -95,71 +95,16 @@ instrumentation so splitters are not a black box. Direction:
 Until then, observability stops at the library boundary; callers must log or
 trace around ``split`` themselves.
 
-### HEPScore-normalized work (DiracX / PanDA alignment)
+### HEPScore23-normalized packing
 
-Wall-clock estimates today use a raw `time_per_event` (seconds per event on
-an implicit machine class). That mis-sizes jobs across heterogeneous sites.
-The intended redesign is to treat packing cost in **HEPScore23** units
-(and later GPU scores such as HEPScore4GPU), not legacy DB12 / HS06 as the
-target scale.
+Wall-clock ``time_per_event`` assumes an implicit machine class. The intended
+redesign uses **HEPScore23·s per event** plus a **baseline HS23/core**, while
+keeping ``target_job_walltime`` (e.g. ~12 h on that baseline).
 
-**Packing happens before the execution resource is known.** Job splitting
-produces jobs without knowing which WN (or even which site’s average power)
-will run them. Matchmaking / brokerage comes later. Therefore the splitter
-cannot use the *actual* host HEPScore23; it must size against a
-**baseline / reference** score (campaign-wide, VO-wide, or a site-average
-supplied by the caller). Downstream layers may still apply site averages or
-distributions when matching; that is outside the core packer.
+Full design (definitions, 1-core vs N-core, walltime bridge, packing formulas,
+completed-job accounting, PanDA/DiracX notes):
+[hepscore23.md](hepscore23.md).
 
-**Simplest cms-wm-core direction (preferred first step):**
-
-- Replace (or reinterpret) ``time_per_event`` as **HEPScore23·seconds per
-  event** on a documented baseline node
-- Keep ``target_job_walltime`` as the packing input: it means “desired wall
-  time **if** the job ran on the baseline node”
-- Then:
-
-  ```text
-  events_per_job =
-    floor(target_job_walltime × baseline_HEPScore23 / hepscore23_s_per_event)
-  ```
-
-  Equivalently, walltime on the baseline is
-  ``n_events × hepscore23_s_per_event / baseline_HEPScore23``. Job resource
-  estimates stay in that baseline frame unless the caller later rescales.
-- Do **not** require per-site power, multi-core ``ε``, or safety margins in
-  the first cut; those can layer on later if needed
-- Keep baseline score and rates as **request inputs** (caller-owned); the
-  algorithm does not discover site HEPScore23
-
-**Do not confuse node score, per-core power, and per-event work.** Official
-HEPScore23 measures **node throughput** (workloads fill the machine); WLCG
-accounting then publishes a **per-core** factor
-(``score_per_node / logical_cores``). **HS23·s per event** is normalized
-*work* for one event: it must **not** be divided by job core count when
-moving from 1-core to N-core (that would double-count). Multi-core belongs in
-available power (``N_cores × HS23_per_core × ε``), which shortens walltime for
-the same per-event work. Example: 10 HS23·s/event stays 10 on two cores with
-``ε = 1``; walltime halves because power doubles, not because the rate became
-5.
-
-**PanDA (ATLAS) as a related baseline.** PanDA JEDI already sizes from
-normalized work ([Job Sizing](https://panda-wms.readthedocs.io/en/latest/advanced/sizing.html#job-sizing)):
-
-- Task ``cpuTime`` is **HS06sec per event** historically; site **corepower**
-  is moving to **HS23 per core** after WLCG’s HEPScore23 adoption
-- PanDA can also pack *to a known resource’s* walltime limit using that
-  resource’s corepower — a richer path than our first step, which only uses
-  a baseline node so ``target_job_walltime`` stays meaningful pre-match
-- Consumed work is accounted as benchmark·s
-  (``hs23sec ≈ walltime × corepower × cores × …``)
-- ATLAS also runs HEPScore23 via HammerCloud/PanDA to validate declared vs
-  runtime corepower ([arXiv:2502.04853](https://arxiv.org/abs/2502.04853))
-
-**Dirac / DiracX.** Prefer **HEPScore23** (and GPU successors) as the CMS /
-DiracX-facing scale. Map whatever ``cpu-work`` matchmaking field DiracX
-exposes onto HEPScore23·s; do not treat DB12 as the library’s target unit.
-
-**TODO:** Design and (later) implement the minimal baseline-node model above;
-defer site averages, ``ε``, and match-time rescaling until there is a clear
-caller need. Until then, walltime targets assume an implicit machine class.
+**TODO:** Implement the minimal baseline-node model in that document; defer
+site averages, ``ε``, and match-time rescaling until there is a clear caller
+need.
