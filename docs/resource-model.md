@@ -34,7 +34,9 @@ layers of information:
 
 | Concern | Estimate (sketch) | Target (soft) | Maximum (hard) |
 | --- | --- | --- | --- |
-| Wall-clock time | `n_events × time_per_event` | `target_job_walltime` | `max_job_walltime` |
+| Wall-clock time | `n_events × wall_s_per_event`
+  (HS23 pair or legacy `time_per_event`; see
+  [hepscore23.md](hepscore23.md)) | `target_job_walltime` | `max_job_walltime` |
 | Scratch disk | see disk components below | `target_job_disk` | `max_job_disk` |
 
 Invariant: `target_* ≤ max_*` when both are set.

@@ -18,8 +18,9 @@ FileBased packs whole files into jobs. It is the first algorithm to extract.
 - **Per-file `events`** — required on each input file so resource estimates
   can be computed (`n_events × rates`)
 - Optional **resource targets/maxima** and size/time rates — same shared
-  budget model as the rest of this design (estimates always; hard closes /
-  unsplittable flags as we wire them in)
+  budget model as the rest of this design. Walltime uses HEPScore23 when
+  both `hepscore23_s_per_event` and `baseline_hs23_per_core` are set,
+  otherwise legacy `time_per_event` (see [HEPScore23](hepscore23.md))
 
 ### Explicitly out of scope for FileBased
 
@@ -42,4 +43,6 @@ network estimate). `run_lumis` is ignored if present.
 **Output:** ordered ``SplitResult.jobs`` (LFN-sorted packing). Each job sets
 ``n_events`` to the sum of assigned file-level ``events`` (same total used for
 resource estimates). Input ``network`` is the sum of assigned file ``size``
-values. Deterministic for the same input.
+values. When packed with HEPScore23 rates, ``expected_hs23_s`` is
+``n_events × hepscore23_s_per_event``; otherwise ``None``. Deterministic for
+the same input.

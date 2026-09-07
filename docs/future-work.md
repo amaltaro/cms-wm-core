@@ -105,6 +105,7 @@ Full design (definitions, 1-core vs N-core, walltime bridge, packing formulas,
 completed-job accounting, PanDA/DiracX notes):
 [hepscore23.md](hepscore23.md).
 
-**Status:** shared helpers + [EventBased](event-based.md) packing are in
-tree. Migrate the other algorithms one at a time; defer site averages,
-``ε``, and match-time rescaling until there is a clear caller need.
+**Status:** shared helpers + [EventBased](event-based.md) and
+[FileBased](file-based.md) are in tree (FileBased via ``file_common``).
+Migrate remaining algorithms one at a time; defer site averages, ``ε``, and
+match-time rescaling until there is a clear caller need.
