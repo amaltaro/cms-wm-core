@@ -6,7 +6,10 @@ https://github.com/dmwm/WMCore/blob/master/src/python/WMCore/JobSplitting/EventB
 Assigns disjoint half-open event ranges
 ``[first_event, first_event + n_events)`` and a unique integer luminosity
 section per job. ``events_per_job`` is derived as
-``floor(target_job_walltime / time_per_event)``.
+``floor(target_job_walltime / wall_s_per_event)``, where ``wall_s_per_event``
+comes from HEPScore23 rates when set
+(``hepscore23_s_per_event / baseline_hs23_per_core``), else legacy
+``time_per_event`` (see ``docs/hepscore23.md``).
 
 Upstream ``MCFakeFile`` placeholders are not emitted; event/lumi fields on
 ``SplitJob`` replace that convention.
@@ -23,6 +26,10 @@ from cms_wm_core.job_splitting.base import JobSplitter
 from cms_wm_core.job_splitting.file_common import (
     estimates_for_events,
     exceeds_maximum,
+)
+from cms_wm_core.job_splitting.hepscore import (
+    get_expected_hs23_s,
+    wall_seconds_per_event,
 )
 from cms_wm_core.job_splitting.types import (
     ResourceBudgets,
@@ -86,10 +93,8 @@ class EventBasedSplitter(JobSplitter[EventBasedRequest]):
         if request.total_events == 0:
             return SplitResult(jobs=())
 
-        chunk = events_per_job(
-            request.target_job_walltime,
-            request.rates.time_per_event,
-        )
+        wall_s = wall_seconds_per_event(request.rates, require=True)
+        chunk = events_per_job(request.target_job_walltime, wall_s)
 
         jobs: list[SplitJob] = []
         remaining = request.total_events
@@ -107,6 +112,7 @@ class EventBasedSplitter(JobSplitter[EventBasedRequest]):
                     first_event=current_event,
                     n_events=n_events,
                     lumi=current_lumi,
+                    expected_hs23_s=get_expected_hs23_s(n_events, request.rates),
                     unsplittable=reason is not None,
                     unsplittable_reason=reason,
                 )

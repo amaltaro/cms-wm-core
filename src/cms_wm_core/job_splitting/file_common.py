@@ -6,6 +6,7 @@ package API (not re-exported from ``__init__``).
 
 from __future__ import annotations
 
+from cms_wm_core.job_splitting.hepscore import wall_seconds_per_event
 from cms_wm_core.job_splitting.types import (
     ResourceBudgets,
     ResourceEstimates,
@@ -24,8 +25,9 @@ def estimates_for_events(
     """Resource estimates for a known event count (no input files required)."""
     transient = n_events * rates.transient_output_size_per_event
     persisted = n_events * rates.persisted_output_size_per_event
+    wall_s = wall_seconds_per_event(rates, require=False)
     return ResourceEstimates(
-        walltime=n_events * rates.time_per_event,
+        walltime=n_events * wall_s,
         scratch_disk=transient + persisted,
         persisted_output=persisted,
         network=network,

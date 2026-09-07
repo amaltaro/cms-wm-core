@@ -61,9 +61,19 @@ class SplitFile:
 
 @dataclass(frozen=True)
 class ResourceRates:
-    """How resource cost scales with events (caller-provided or derived)."""
+    """How resource cost scales with events (caller-provided or derived).
+
+    Packing / walltime estimates prefer HEPScore23 when both
+    ``hepscore23_s_per_event`` and ``baseline_hs23_per_core`` are > 0
+    (see ``docs/hepscore23.md``). Otherwise legacy ``time_per_event``
+    (wall seconds on an implicit machine) is used.
+    """
 
     time_per_event: float = 0.0
+    # Normalized work per event (HS23·seconds); pair with baseline below.
+    hepscore23_s_per_event: float = 0.0
+    # Baseline HS23 per core for converting work → wall time at pack time.
+    baseline_hs23_per_core: float = 0.0
     input_size_per_event: float = 0.0
     transient_output_size_per_event: float = 0.0
     persisted_output_size_per_event: float = 0.0
@@ -129,6 +139,8 @@ class SplitJob:
     lumi: int | None = None
     # Compact run/lumi mask for processing splitters (EventAwareLumi).
     run_lumi_mask: tuple[RunLumiRange, ...] = ()
+    # Expected CPU work in HS23·s when packed with HEPScore23 rates; else None.
+    expected_hs23_s: float | None = None
     # True when this unit cannot fit under maxima (unsplittable).
     unsplittable: bool = False
     unsplittable_reason: str | None = None

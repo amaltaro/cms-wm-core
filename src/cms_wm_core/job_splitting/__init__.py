@@ -5,6 +5,7 @@ Typical layout:
 * ``types`` — dataclasses for files, budgets, jobs, results (data)
 * ``base`` — ``JobSplitter`` ABC (behavior every algorithm must implement)
 * ``file_common`` — common functionality for file-based algorithms
+* ``hepscore`` — HEPScore23 wall-time / work helpers
 * ``file_based`` / ``lumi_aware_file`` / ``event_based`` /
   ``event_aware_lumi`` / ``merge_by_size`` — concrete algorithms
 
