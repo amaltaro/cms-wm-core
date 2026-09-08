@@ -330,3 +330,89 @@ def test_resource_estimates_use_output_rates_and_input_size_per_event():
     assert estimates.scratch_disk == 30.0  # 10 × (2.0 + 1.0)
     assert estimates.persisted_output == 10.0  # 10 × 1.0
     assert estimates.network == 50.0  # 10 × 5.0 (not file size)
+    assert result.jobs[0].expected_hs23_s is None
+
+
+def test_hepscore23_packing_and_expected_work():
+    """HS23 wall_s=2 → target 50 events; closest-to-target packs (30,30)+(30)."""
+    # After 60, adding 30: |90-50|=40 >= |60-50|=10 → close
+    files = (
+        _file(
+            "/store/a.root",
+            events=90,
+            run_lumis=(
+                RunLumiEvents(1, 1, 30),
+                RunLumiEvents(1, 2, 30),
+                RunLumiEvents(1, 3, 30),
+            ),
+        ),
+    )
+    rates = ResourceRates(
+        hepscore23_s_per_event=20.0,
+        baseline_hs23_per_core=10.0,
+        input_size_per_event=1.0,
+        transient_output_size_per_event=2.0,
+        persisted_output_size_per_event=1.0,
+    )
+    result = EventAwareLumiSplitter().split(
+        EventAwareLumiRequest(
+            files=files,
+            target_job_walltime=100.0,
+            rates=rates,
+        )
+    )
+    assert len(result.jobs) == 2
+    assert result.jobs[0].n_events == 60
+    assert result.jobs[0].estimates.walltime == 120.0  # 60 × 2
+    assert result.jobs[0].expected_hs23_s == 1200.0  # 60 × 20
+    assert result.jobs[0].run_lumi_mask == (
+        RunLumiRange(run=1, first_lumi=1, last_lumi=2),
+    )
+    assert result.jobs[1].n_events == 30
+    assert result.jobs[1].estimates.walltime == 60.0
+    assert result.jobs[1].expected_hs23_s == 600.0
+    assert result.jobs[1].estimates.network == 30.0
+
+
+def test_hepscore23_preferred_over_legacy_time_per_event():
+    rates = ResourceRates(
+        time_per_event=100.0,  # would yield floor(100/100)=1 if used
+        hepscore23_s_per_event=20.0,
+        baseline_hs23_per_core=10.0,  # wall_s=2 → floor(100/2)=50
+        input_size_per_event=1.0,
+    )
+    files = (
+        _file(
+            "/store/a.root",
+            events=40,
+            run_lumis=(RunLumiEvents(1, 1, 40),),
+        ),
+    )
+    job = EventAwareLumiSplitter().split(
+        EventAwareLumiRequest(
+            files=files,
+            target_job_walltime=100.0,
+            rates=rates,
+        )
+    ).jobs[0]
+    assert job.n_events == 40
+    assert job.estimates.walltime == 80.0
+    assert job.expected_hs23_s == 800.0
+
+
+def test_partial_hepscore23_rates_rejected():
+    files = (
+        _file(
+            "/store/a.root",
+            events=10,
+            run_lumis=(RunLumiEvents(1, 1, 10),),
+        ),
+    )
+    with pytest.raises(ValueError, match="both be > 0"):
+        EventAwareLumiSplitter().split(
+            EventAwareLumiRequest(
+                files=files,
+                target_job_walltime=100.0,
+                rates=ResourceRates(hepscore23_s_per_event=20.0),
+            )
+        )
