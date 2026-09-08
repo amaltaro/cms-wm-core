@@ -105,8 +105,8 @@ Full design (definitions, 1-core vs N-core, walltime bridge, packing formulas,
 completed-job accounting, PanDA/DiracX notes):
 [hepscore23.md](hepscore23.md).
 
-**Status:** shared helpers + [EventBased](event-based.md),
-[FileBased](file-based.md), [LumiAwareFile](lumi-aware-file.md), and
-[MergeBySize](merge-by-size.md) are in tree (file-oriented via
-``file_common``). **EventAwareLumi** is next; defer site averages, ``ε``, and
+**Status:** shared helpers + all v1 splitters
+([EventBased](event-based.md), [FileBased](file-based.md),
+[LumiAwareFile](lumi-aware-file.md), [MergeBySize](merge-by-size.md),
+[EventAwareLumi](event-aware-lumi.md)). Defer site averages, ``ε``, and
 match-time rescaling until there is a clear caller need.

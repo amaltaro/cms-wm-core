@@ -141,15 +141,24 @@ because a job may process only a subset of each file’s lumis. See
 Align with EventBased for the soft packing goal:
 
 ```text
-events_per_job = floor(target_job_walltime / time_per_event)
+wall_s_per_event =
+  hepscore23_s_per_event / baseline_hs23_per_core   # when both > 0
+  else time_per_event                                 # legacy
+
+events_per_job = floor(target_job_walltime / wall_s_per_event)
 ```
 
-Require `time_per_event > 0`, `target_job_walltime > 0`, and
-`events_per_job >= 1`. Optional hard `max_job_walltime` / `max_job_disk`
-follow the shared budget model (unsplittable when a single lumi cannot fit).
+Prefer HEPScore23 when both rate fields are set; otherwise require
+`time_per_event > 0`. Always require `target_job_walltime > 0` and
+`events_per_job >= 1`. Partial HS23 config is rejected. See
+[HEPScore23](hepscore23.md). Optional hard `max_job_walltime` /
+`max_job_disk` follow the shared budget model (unsplittable when a single
+lumi cannot fit).
 
 Events are a **sizing** signal; the **assigned work** is always a set of
-`(run, lumi)` pairs (and the files that contain them).
+`(run, lumi)` pairs (and the files that contain them). When packed with
+HEPScore23 rates, each job sets ``expected_hs23_s`` to
+``n_events × hepscore23_s_per_event``; otherwise ``None``.
 
 ### Packing modes
 
@@ -260,8 +269,9 @@ RunLumiEvents.events: int | None   # extend current int-only field
 
 EventAwareLumiRequest:
   files: tuple[SplitFile, ...]     # each with non-empty run_lumis
-  rates: ResourceRates             # time_per_event required
-  budgets: ResourceBudgets         # target_job_walltime required
+  target_job_walltime: float       # soft packing goal
+  rates: ResourceRates             # HS23 pair or legacy time_per_event
+  budgets: ResourceBudgets         # optional hard maxima
   # boundary flags: TBD — see open question above
   # run/lumi allow-list: Future work (v1 = full files)
 
