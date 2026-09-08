@@ -198,3 +198,35 @@ def test_estimates_use_optional_rates():
     assert job.estimates.persisted_output == 5.0
     assert job.estimates.scratch_disk == 5.0  # persisted only
     assert job.estimates.network == 10.0
+    assert job.expected_hs23_s is None
+
+
+def test_hepscore23_walltime_and_expected_work():
+    """Size packing unchanged; optional HS23 rates drive walltime / work."""
+    files = (
+        _file("/store/a.root", size=70, events=5),
+        _file("/store/b.root", size=30, events=3),
+    )
+    result = MergeBySizeSplitter().split(
+        MergeBySizeRequest(
+            files=files,
+            min_output_size_bytes=50,
+            max_output_size_bytes=100,
+            rates=ResourceRates(
+                hepscore23_s_per_event=20.0,
+                baseline_hs23_per_core=10.0,  # wall_s/event = 2
+                # Forced to 0 by MergeBySize; must not affect scratch.
+                transient_output_size_per_event=99.0,
+                persisted_output_size_per_event=1.0,
+            ),
+        )
+    )
+    assert len(result.jobs) == 1
+    job = result.jobs[0]
+    assert job.input_lfns == ("/store/a.root", "/store/b.root")
+    assert job.n_events == 8
+    assert job.estimates.walltime == 16.0
+    assert job.expected_hs23_s == 160.0  # 8 × 20
+    assert job.estimates.network == 100.0
+    assert job.estimates.persisted_output == 8.0
+    assert job.estimates.scratch_disk == 8.0
