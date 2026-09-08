@@ -6,10 +6,9 @@ https://github.com/dmwm/WMCore/blob/master/src/python/WMCore/JobSplitting/EventB
 Assigns disjoint half-open event ranges
 ``[first_event, first_event + n_events)`` and a unique integer luminosity
 section per job. ``events_per_job`` is derived as
-``floor(target_job_walltime / wall_s_per_event)``, where ``wall_s_per_event``
-comes from HEPScore23 rates when set
-(``hepscore23_s_per_event / baseline_hs23_per_core``), else legacy
-``time_per_event`` (see ``docs/hepscore23.md``).
+``floor(target_job_walltime / wall_s_per_event)``, where
+``wall_s_per_event = hepscore23_s_per_event / baseline_hs23_per_core``
+(see ``docs/hepscore23.md``).
 
 Upstream ``MCFakeFile`` placeholders are not emitted; event/lumi fields on
 ``SplitJob`` replace that convention.
@@ -27,9 +26,7 @@ from cms_wm_core.job_splitting.file_common import (
     estimates_for_events,
     exceeds_maximum,
 )
-from cms_wm_core.job_splitting.hepscore import (
-    wall_seconds_per_event,
-)
+from cms_wm_core.job_splitting.hepscore import wall_seconds_per_event
 from cms_wm_core.job_splitting.types import (
     ResourceBudgets,
     ResourceRates,
@@ -50,21 +47,21 @@ class EventBasedRequest:
     budgets: ResourceBudgets = ResourceBudgets()
 
 
-def events_per_job(target_job_walltime: float, time_per_event: float) -> int:
-    """Positive integer job size from walltime target and time per event."""
-    if time_per_event <= 0.0:
+def events_per_job(target_job_walltime: float, wall_s_per_event: float) -> int:
+    """Positive integer job size from walltime target and seconds per event."""
+    if wall_s_per_event <= 0.0:
         raise ValueError(
-            f"time_per_event must be > 0, got {time_per_event}"
+            f"wall_s_per_event must be > 0, got {wall_s_per_event}"
         )
     if target_job_walltime <= 0.0:
         raise ValueError(
             f"target_job_walltime must be > 0, got {target_job_walltime}"
         )
-    n_events = int(target_job_walltime // time_per_event)
+    n_events = int(target_job_walltime // wall_s_per_event)
     if n_events < 1:
         raise ValueError(
             "events_per_job must be >= 1; got "
-            f"floor({target_job_walltime} / {time_per_event}) = {n_events}"
+            f"floor({target_job_walltime} / {wall_s_per_event}) = {n_events}"
         )
     return n_events
 

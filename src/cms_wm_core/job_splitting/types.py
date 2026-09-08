@@ -63,13 +63,12 @@ class SplitFile:
 class ResourceRates:
     """How resource cost scales with events (caller-provided or derived).
 
-    Packing / walltime estimates prefer HEPScore23 when both
+    Packing / walltime estimates use HEPScore23 when both
     ``hepscore23_s_per_event`` and ``baseline_hs23_per_core`` are > 0
-    (see ``docs/hepscore23.md``). Otherwise legacy ``time_per_event``
-    (wall seconds on an implicit machine) is used.
+    (see ``docs/hepscore23.md``). Both may be left at 0 when walltime
+    estimates are not needed (e.g. size-only MergeBySize).
     """
 
-    time_per_event: float = 0.0
     # Normalized work per event (HS23·seconds); pair with baseline below.
     hepscore23_s_per_event: float = 0.0
     # Baseline HS23 per core for converting work → wall time at pack time.
@@ -106,9 +105,9 @@ class ResourceEstimates:
     ``size``; event/lumi packers use ``n_events × input_size_per_event``.
     Stage-out / output network is not included yet (see future work).
 
-    ``expected_hs23_s`` is expected CPU work in HS23·seconds when rates use
-    HEPScore23; ``None`` on the legacy ``time_per_event`` path. Not used as a
-    packing decision factor (see ``docs/hepscore23.md``).
+    ``expected_hs23_s`` is expected CPU work in HS23·seconds when both HS23
+    rate fields are set; ``None`` when they are unset. Not used as a packing
+    decision factor (see ``docs/hepscore23.md``).
     """
 
     walltime: float = 0.0

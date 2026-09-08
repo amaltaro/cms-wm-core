@@ -8,14 +8,13 @@ WMCore ``EventAwareLumiBased`` (production) and ``EventAwareLumiByWork``
 * https://github.com/dmwm/WMCore/blob/master/src/python/WMCore/JobSplitting/EventAwareLumiByWork.py
 
 ``events_per_job = floor(target_job_walltime / wall_s_per_event)``, where
-``wall_s_per_event`` comes from HEPScore23 rates when set
-(``hepscore23_s_per_event / baseline_hs23_per_core``), else legacy
-``time_per_event`` (see ``docs/hepscore23.md``). Within each file, per-lumi
-``events`` must be uniformly ``int`` (used directly) or uniformly ``None``
-(each lumi weighted ``round(file.events / n_lumis)``). Mixed known/legacy
-event count metadata in one file is rejected. Jobs accumulate one or more
-lumis. Packing closes before the next lumi when adding it would not get
-closer to the event target (ByWork closest-to-target rule).
+``wall_s_per_event = hepscore23_s_per_event / baseline_hs23_per_core``
+(see ``docs/hepscore23.md``). Within each file, per-lumi ``events`` must be
+uniformly ``int`` (used directly) or uniformly ``None`` (each lumi weighted
+``round(file.events / n_lumis)``). Mixed known/legacy event count metadata in
+one file is rejected. Jobs accumulate one or more lumis. Packing closes before
+the next lumi when adding it would not get closer to the event target (ByWork
+closest-to-target rule).
 
 Each ``(run, lumi)`` must appear in exactly one input file. Workflows that
 share the same run/lumi across files must use :class:`LumiAwareFileSplitter`
