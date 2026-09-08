@@ -14,6 +14,10 @@ Each input file must provide a non-empty ``run_lumis`` list. Per-lumi event
 counts on ``RunLumiEvents`` are accepted for metadata but resource estimates
 still use the file-level ``events`` / ``size`` fields (same as FileBased).
 
+Walltime estimates and soft/hard closes use HEPScore23 rates when set
+(via shared ``file_common``; see ``docs/hepscore23.md``), else legacy
+``time_per_event``.
+
 Intentionally omitted: location bucketing, lumi masks, parents,
 ``jobs_per_group``, memory packing.
 """
