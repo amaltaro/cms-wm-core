@@ -37,10 +37,7 @@ from cms_wm_core.job_splitting.file_common import (
     exceeds_maximum,
     validate_file_basics,
 )
-from cms_wm_core.job_splitting.hepscore import (
-    get_expected_hs23_s,
-    wall_seconds_per_event,
-)
+from cms_wm_core.job_splitting.hepscore import wall_seconds_per_event
 from cms_wm_core.job_splitting.types import (
     ResourceBudgets,
     ResourceRates,
@@ -235,10 +232,6 @@ class EventAwareLumiSplitter(JobSplitter[EventAwareLumiRequest]):
                 estimates=estimates,
                 n_events=state.events_in_job,
                 run_lumi_mask=_compact_mask(state.current_lumis),
-                expected_hs23_s=get_expected_hs23_s(
-                    state.events_in_job,
-                    state.rates,
-                ),
                 unsplittable=unsplittable,
                 unsplittable_reason=reason,
             )

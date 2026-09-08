@@ -28,7 +28,6 @@ from cms_wm_core.job_splitting.file_common import (
     exceeds_maximum,
 )
 from cms_wm_core.job_splitting.hepscore import (
-    get_expected_hs23_s,
     wall_seconds_per_event,
 )
 from cms_wm_core.job_splitting.types import (
@@ -112,7 +111,6 @@ class EventBasedSplitter(JobSplitter[EventBasedRequest]):
                     first_event=current_event,
                     n_events=n_events,
                     lumi=current_lumi,
-                    expected_hs23_s=get_expected_hs23_s(n_events, request.rates),
                     unsplittable=reason is not None,
                     unsplittable_reason=reason,
                 )

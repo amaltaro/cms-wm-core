@@ -34,6 +34,7 @@ def estimates_for_events(
         scratch_disk=transient + persisted,
         persisted_output=persisted,
         network=network,
+        expected_hs23_s=get_expected_hs23_s(n_events, rates),
     )
 
 
@@ -104,7 +105,6 @@ def make_job(
         input_lfns=tuple(f.lfn for f in ordered),
         estimates=estimates_for(ordered, rates),
         n_events=n_events,
-        expected_hs23_s=get_expected_hs23_s(n_events, rates),
         unsplittable=unsplittable,
         unsplittable_reason=reason,
     )

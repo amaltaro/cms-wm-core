@@ -105,12 +105,17 @@ class ResourceEstimates:
     derived depends on the algorithm: whole-file splitters sum assigned file
     ``size``; event/lumi packers use ``n_events × input_size_per_event``.
     Stage-out / output network is not included yet (see future work).
+
+    ``expected_hs23_s`` is expected CPU work in HS23·seconds when rates use
+    HEPScore23; ``None`` on the legacy ``time_per_event`` path. Not used as a
+    packing decision factor (see ``docs/hepscore23.md``).
     """
 
     walltime: float = 0.0
     scratch_disk: float = 0.0
     persisted_output: float = 0.0
     network: float = 0.0
+    expected_hs23_s: float | None = None
 
 
 @dataclass(frozen=True)
@@ -139,8 +144,6 @@ class SplitJob:
     lumi: int | None = None
     # Compact run/lumi mask for processing splitters (EventAwareLumi).
     run_lumi_mask: tuple[RunLumiRange, ...] = ()
-    # Expected CPU work in HS23·s when packed with HEPScore23 rates; else None.
-    expected_hs23_s: float | None = None
     # True when this unit cannot fit under maxima (unsplittable).
     unsplittable: bool = False
     unsplittable_reason: str | None = None
