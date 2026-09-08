@@ -126,9 +126,13 @@ Merge jobs are I/O-heavy. Proposed v1:
 - **`persisted_output` / scratch / walltime**: from optional rates ×
   `n_events` when provided (otherwise zeros). Scratch therefore equals
   persisted for merge jobs (`0 + persisted`), not zero disk.
+- **Walltime / `expected_hs23_s`**: optional. Prefer HEPScore23 when both
+  `hepscore23_s_per_event` and `baseline_hs23_per_core` are set; otherwise
+  legacy `time_per_event` (shared ``file_common``; see
+  [HEPScore23](hepscore23.md)). Packing stays size-based either way.
 
-Do not pretend processing `time_per_event` applies unless the caller passes
-merge-calibrated rates.
+Do not pretend processing timing rates apply unless the caller passes
+merge-calibrated values.
 
 ### Leftover files below min (v1 decision)
 
@@ -160,8 +164,8 @@ Module: `merge_by_size.py` (implemented).
 
 v1 implemented: min/max validation, ``(-size, lfn)`` order with full-remainder
 fill toward ``max`` (``O(n^2)``), always-flush emits, oversize singleton as a
-normal one-file job, `n_events` + `network` via shared `make_job` /
-`estimates_for`.
+normal one-file job, `n_events` + `network` + optional HS23/legacy walltime
+via shared `make_job` / `estimates_for`.
 
 ### Open note: oversize single file vs `unsplittable`
 
