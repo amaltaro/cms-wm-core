@@ -5,9 +5,9 @@ Design notes for moving cms-wm-core packing from opaque wall-clock
 a wall-clock job duration (CMS often aims for ~12 h).
 
 Part of the [job-splitting design](README.md). Helpers live in
-``job_splitting.hepscore``; **EventBased** and **FileBased** use them today
-(FileBased via shared ``file_common`` estimates / ``make_job``). Remaining
-algorithms migrate one at a time
+``job_splitting.hepscore``; **EventBased**, **FileBased**, and
+**LumiAwareFile** use them today (file-oriented via shared ``file_common``).
+Remaining algorithms migrate one at a time
 (see [future-work](future-work.md#hepscore23-normalized-packing)).
 
 ---
@@ -237,8 +237,8 @@ corepower moving to HS23/core after WLCG adoption).
 | [EventBased](event-based.md) packing via HS23 or legacy | Done |
 | [FileBased](file-based.md) estimates / closes / ``expected_hs23_s`` | Done
   (via ``file_common``) |
-| LumiAwareFile / MergeBySize | Inherit ``file_common`` estimates /
-  ``expected_hs23_s``; no algorithm-specific change yet |
+| [LumiAwareFile](lumi-aware-file.md) | Done (same ``file_common`` path) |
+| MergeBySize | Inherits ``file_common``; docs/test pending |
 | EventAwareLumi | Still legacy path in its own job builder |
 | Multi-core ``ε``, site HS23, match-time rescaling | Deferred |
 

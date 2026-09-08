@@ -27,7 +27,12 @@ Same as FileBased otherwise:
 - ``files_per_job`` packs whole **components** (never splits a component)
 - A component larger than ``files_per_job`` still becomes one job
 - Resource rates / targets / maxima apply to the files in the job
+- Walltime uses HEPScore23 when both `hepscore23_s_per_event` and
+  `baseline_hs23_per_core` are set, otherwise legacy `time_per_event`
+  (shared ``file_common``; see [HEPScore23](hepscore23.md))
 - Estimates use file-level ``events`` and ``size``; jobs set ``n_events`` to
   that event sum
+- When packed with HEPScore23 rates, ``expected_hs23_s`` is
+  ``n_events × hepscore23_s_per_event``; otherwise ``None``
 - Input ``network`` is the sum of assigned file ``size`` (whole files)
 - Deterministic: components ordered by minimum LFN; LFNs sorted within a job
