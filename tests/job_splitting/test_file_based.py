@@ -62,7 +62,7 @@ def test_packs_by_files_per_job_and_sorts_by_lfn():
             ("/store/b.root", 3, 300),
         ),
         files_per_job=2,
-        rates=ResourceRates(time_per_event=1.0),
+        rates=ResourceRates(hepscore23_s_per_event=1.0, baseline_hs23_per_core=1.0),
     )
     result = FileBasedSplitter().split(request)
     assert isinstance(result, SplitResult)
@@ -114,7 +114,7 @@ def test_resource_estimates_use_decomposed_rates():
         files=(SplitFile(lfn="/store/a.root", events=10, size=1000),),
         files_per_job=1,
         rates=ResourceRates(
-            time_per_event=2.0,
+            hepscore23_s_per_event=2.0, baseline_hs23_per_core=1.0,
             transient_output_size_per_event=3.0,
             persisted_output_size_per_event=4.0,
         ),
@@ -133,7 +133,7 @@ def test_single_file_over_max_walltime_is_unsplittable():
             ("/store/ok.root", 5, 50),
         ),
         files_per_job=10,
-        rates=ResourceRates(time_per_event=1.0),
+        rates=ResourceRates(hepscore23_s_per_event=1.0, baseline_hs23_per_core=1.0),
         budgets=ResourceBudgets(max_job_walltime=50.0),
     )
     jobs = FileBasedSplitter().split(request).jobs
@@ -185,7 +185,7 @@ def test_soft_target_walltime_closes_job_early():
             ("/store/c.root", 10, 100),
         ),
         files_per_job=10,
-        rates=ResourceRates(time_per_event=1.0),
+        rates=ResourceRates(hepscore23_s_per_event=1.0, baseline_hs23_per_core=1.0),
         budgets=ResourceBudgets(target_job_walltime=10.0),
     )
     jobs = FileBasedSplitter().split(request).jobs
@@ -195,7 +195,7 @@ def test_soft_target_walltime_closes_job_early():
         ("/store/b.root",),
         ("/store/c.root",),
     ]
-    assert all(job.estimates.expected_hs23_s is None for job in jobs)
+    assert all(job.estimates.expected_hs23_s == 10.0 for job in jobs)
 
 
 def test_hepscore23_walltime_and_expected_work():
@@ -218,12 +218,10 @@ def test_hepscore23_walltime_and_expected_work():
     assert jobs[0].estimates.network == 80.0
 
 
-def test_hepscore23_preferred_over_legacy_for_soft_close():
-    # HS23 → 2 s/event; legacy 100 s/event would close differently
+def test_hepscore23_soft_close_by_walltime_target():
     rates = ResourceRates(
-        time_per_event=100.0,
         hepscore23_s_per_event=20.0,
-        baseline_hs23_per_core=10.0,
+        baseline_hs23_per_core=10.0,  # wall_s = 2
     )
     jobs = FileBasedSplitter().split(
         FileBasedRequest(

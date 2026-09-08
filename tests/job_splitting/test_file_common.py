@@ -22,7 +22,7 @@ def test_estimates_for_events_without_files():
     estimates = estimates_for_events(
         10,
         ResourceRates(
-            time_per_event=2.0,
+            hepscore23_s_per_event=2.0, baseline_hs23_per_core=1.0,
             transient_output_size_per_event=1.0,
             persisted_output_size_per_event=1.0,
         ),
@@ -34,8 +34,14 @@ def test_estimates_for_events_without_files():
 
 
 def test_estimates_for_empty_file_list():
-    estimates = estimates_for([], ResourceRates(time_per_event=2.0))
+    estimates = estimates_for([], ResourceRates())
     assert estimates == ResourceEstimates()
+    # With HS23 set and zero events, expected work is 0.0 (not None).
+    with_rates = estimates_for(
+        [],
+        ResourceRates(hepscore23_s_per_event=2.0, baseline_hs23_per_core=1.0),
+    )
+    assert with_rates == ResourceEstimates(expected_hs23_s=0.0)
 
 
 def test_estimates_for_sums_events_and_sizes():
@@ -44,7 +50,7 @@ def test_estimates_for_sums_events_and_sizes():
         SplitFile(lfn="/store/b.root", events=5, size=50),
     ]
     rates = ResourceRates(
-        time_per_event=2.0,
+        hepscore23_s_per_event=2.0, baseline_hs23_per_core=1.0,
         transient_output_size_per_event=3.0,
         persisted_output_size_per_event=4.0,
     )
@@ -140,7 +146,7 @@ def test_make_job_sorts_lfns_and_computes_estimates():
         SplitFile(lfn="/store/b.root", events=2, size=20),
         SplitFile(lfn="/store/a.root", events=3, size=30),
     ]
-    job = make_job(files, ResourceRates(time_per_event=1.0))
+    job = make_job(files, ResourceRates(hepscore23_s_per_event=1.0, baseline_hs23_per_core=1.0))
     assert job.input_lfns == ("/store/a.root", "/store/b.root")
     assert job.n_events == 5
     assert job.estimates.walltime == 5.0

@@ -12,19 +12,24 @@ from cms_wm_core.job_splitting.event_based import events_per_job
 
 
 def _rates(**kwargs: float) -> ResourceRates:
-    return ResourceRates(time_per_event=1.0, **kwargs)
+    """Default wall_s/event = 1.0 via HS23 work / baseline."""
+    return ResourceRates(
+        hepscore23_s_per_event=1.0,
+        baseline_hs23_per_core=1.0,
+        **kwargs,
+    )
 
 
 def test_splitter_name():
     assert EventBasedSplitter().name == "EventBased"
 
 
-def test_events_per_job_from_walltime_and_time_per_event():
-    assert events_per_job(target_job_walltime=100.0, time_per_event=3.0) == 33
+def test_events_per_job_from_walltime_and_wall_s():
+    assert events_per_job(target_job_walltime=100.0, wall_s_per_event=3.0) == 33
 
 
 def test_events_per_job_rejects_non_positive_inputs():
-    with pytest.raises(ValueError, match="time_per_event"):
+    with pytest.raises(ValueError, match="wall_s_per_event"):
         events_per_job(10.0, 0.0)
     with pytest.raises(ValueError, match="target_job_walltime"):
         events_per_job(0.0, 1.0)
@@ -88,7 +93,8 @@ def test_resource_estimates_and_zero_network():
             total_events=10,
             target_job_walltime=10.0,
             rates=ResourceRates(
-                time_per_event=2.0,
+                hepscore23_s_per_event=2.0,
+                baseline_hs23_per_core=1.0,
                 transient_output_size_per_event=3.0,
                 persisted_output_size_per_event=4.0,
             ),
@@ -100,6 +106,7 @@ def test_resource_estimates_and_zero_network():
     assert jobs[0].estimates.scratch_disk == 35.0
     assert jobs[0].estimates.persisted_output == 20.0
     assert jobs[0].estimates.network == 0.0
+    assert jobs[0].estimates.expected_hs23_s == 10.0  # 5 × 2
 
 
 def test_max_walltime_marks_unsplittable_but_still_emits_range():
@@ -150,18 +157,6 @@ def test_rejects_invalid_first_event_or_lumi():
         )
 
 
-def test_legacy_path_leaves_expected_hs23_s_none():
-    jobs = EventBasedSplitter().split(
-        EventBasedRequest(
-            total_events=5,
-            target_job_walltime=5.0,
-            rates=_rates(),
-        )
-    ).jobs
-    assert len(jobs) == 1
-    assert all(j.estimates.expected_hs23_s is None for j in jobs)
-
-
 def test_hepscore23_packing_and_expected_work():
     # wall_s/event = 20 / 10 = 2; floor(10/2) = 5 events/job
     rates = ResourceRates(
@@ -185,24 +180,6 @@ def test_hepscore23_packing_and_expected_work():
     assert jobs[2].estimates.walltime == 4.0
 
 
-def test_hepscore23_preferred_over_legacy_time_per_event():
-    rates = ResourceRates(
-        time_per_event=100.0,  # would yield floor(10/100)=0 → error if used
-        hepscore23_s_per_event=20.0,
-        baseline_hs23_per_core=10.0,
-    )
-    jobs = EventBasedSplitter().split(
-        EventBasedRequest(
-            total_events=5,
-            target_job_walltime=10.0,
-            rates=rates,
-        )
-    ).jobs
-    assert len(jobs) == 1
-    assert jobs[0].n_events == 5
-    assert jobs[0].estimates.expected_hs23_s == 100.0
-
-
 def test_partial_hepscore23_rates_rejected():
     with pytest.raises(ValueError, match="both be > 0"):
         EventBasedSplitter().split(
@@ -222,8 +199,8 @@ def test_partial_hepscore23_rates_rejected():
         )
 
 
-def test_requires_some_timing_rate():
-    with pytest.raises(ValueError, match="time_per_event"):
+def test_requires_hepscore23_rates():
+    with pytest.raises(ValueError, match="both > 0"):
         EventBasedSplitter().split(
             EventBasedRequest(
                 total_events=1,

@@ -164,7 +164,7 @@ def test_component_over_max_walltime_is_unsplittable():
         LumiAwareFileRequest(
             files=files,
             files_per_job=10,
-            rates=ResourceRates(time_per_event=1.0),
+            rates=ResourceRates(hepscore23_s_per_event=1.0, baseline_hs23_per_core=1.0),
             budgets=ResourceBudgets(max_job_walltime=50.0),
         )
     ).jobs
@@ -193,7 +193,7 @@ def test_component_with_resource_budgets():
         LumiAwareFileRequest(
             files=files,
             files_per_job=10,
-            rates=ResourceRates(time_per_event=1.0),
+            rates=ResourceRates(hepscore23_s_per_event=1.0, baseline_hs23_per_core=1.0),
             budgets=ResourceBudgets(max_job_walltime=50.0),
         )
     ).jobs

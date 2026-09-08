@@ -185,7 +185,7 @@ def test_estimates_use_optional_rates():
             min_output_size_bytes=1,
             max_output_size_bytes=100,
             rates=ResourceRates(
-                time_per_event=2.0,
+                hepscore23_s_per_event=2.0, baseline_hs23_per_core=1.0,
                 # Non-zero on purpose: MergeBySize must force transient to 0.
                 transient_output_size_per_event=3.0,
                 persisted_output_size_per_event=1.0,
@@ -198,7 +198,7 @@ def test_estimates_use_optional_rates():
     assert job.estimates.persisted_output == 5.0
     assert job.estimates.scratch_disk == 5.0  # persisted only
     assert job.estimates.network == 10.0
-    assert job.estimates.expected_hs23_s is None
+    assert job.estimates.expected_hs23_s == 10.0  # 5 × 2
 
 
 def test_hepscore23_walltime_and_expected_work():
