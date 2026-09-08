@@ -217,3 +217,37 @@ def test_deterministic_for_same_input():
     request = LumiAwareFileRequest(files=files, files_per_job=5)
     splitter = LumiAwareFileSplitter()
     assert splitter.split(request) == splitter.split(request)
+
+
+def test_hepscore23_walltime_and_expected_work_on_shared_lumi_component():
+    # Shared (1, 1) → one atomic job; wall_s/event = 20/10 = 2
+    files = (
+        SplitFile(
+            lfn="/store/a.root",
+            events=5,
+            size=50,
+            run_lumis=_rl((1, 1)),
+        ),
+        SplitFile(
+            lfn="/store/b.root",
+            events=3,
+            size=30,
+            run_lumis=_rl((1, 1)),
+        ),
+    )
+    jobs = LumiAwareFileSplitter().split(
+        LumiAwareFileRequest(
+            files=files,
+            files_per_job=1,
+            rates=ResourceRates(
+                hepscore23_s_per_event=20.0,
+                baseline_hs23_per_core=10.0,
+            ),
+        )
+    ).jobs
+    assert len(jobs) == 1
+    assert jobs[0].input_lfns == ("/store/a.root", "/store/b.root")
+    assert jobs[0].n_events == 8
+    assert jobs[0].estimates.walltime == 16.0
+    assert jobs[0].expected_hs23_s == 160.0  # 8 × 20
+    assert jobs[0].estimates.network == 80.0
