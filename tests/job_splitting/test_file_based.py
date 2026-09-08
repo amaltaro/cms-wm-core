@@ -195,7 +195,7 @@ def test_soft_target_walltime_closes_job_early():
         ("/store/b.root",),
         ("/store/c.root",),
     ]
-    assert all(job.expected_hs23_s is None for job in jobs)
+    assert all(job.estimates.expected_hs23_s is None for job in jobs)
 
 
 def test_hepscore23_walltime_and_expected_work():
@@ -214,7 +214,7 @@ def test_hepscore23_walltime_and_expected_work():
     assert len(jobs) == 1
     assert jobs[0].n_events == 8
     assert jobs[0].estimates.walltime == 16.0
-    assert jobs[0].expected_hs23_s == 160.0  # 8 × 20
+    assert jobs[0].estimates.expected_hs23_s == 160.0  # 8 × 20
     assert jobs[0].estimates.network == 80.0
 
 
@@ -238,7 +238,7 @@ def test_hepscore23_preferred_over_legacy_for_soft_close():
     ).jobs
     assert len(jobs) == 2
     assert jobs[0].estimates.walltime == 10.0
-    assert jobs[0].expected_hs23_s == 100.0
+    assert jobs[0].estimates.expected_hs23_s == 100.0
 
 
 def test_partial_hepscore23_rates_rejected():

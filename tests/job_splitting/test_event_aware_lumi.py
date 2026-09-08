@@ -330,7 +330,7 @@ def test_resource_estimates_use_output_rates_and_input_size_per_event():
     assert estimates.scratch_disk == 30.0  # 10 × (2.0 + 1.0)
     assert estimates.persisted_output == 10.0  # 10 × 1.0
     assert estimates.network == 50.0  # 10 × 5.0 (not file size)
-    assert result.jobs[0].expected_hs23_s is None
+    assert result.jobs[0].estimates.expected_hs23_s is None
 
 
 def test_hepscore23_packing_and_expected_work():
@@ -364,13 +364,13 @@ def test_hepscore23_packing_and_expected_work():
     assert len(result.jobs) == 2
     assert result.jobs[0].n_events == 60
     assert result.jobs[0].estimates.walltime == 120.0  # 60 × 2
-    assert result.jobs[0].expected_hs23_s == 1200.0  # 60 × 20
+    assert result.jobs[0].estimates.expected_hs23_s == 1200.0  # 60 × 20
     assert result.jobs[0].run_lumi_mask == (
         RunLumiRange(run=1, first_lumi=1, last_lumi=2),
     )
     assert result.jobs[1].n_events == 30
     assert result.jobs[1].estimates.walltime == 60.0
-    assert result.jobs[1].expected_hs23_s == 600.0
+    assert result.jobs[1].estimates.expected_hs23_s == 600.0
     assert result.jobs[1].estimates.network == 30.0
 
 
@@ -397,7 +397,7 @@ def test_hepscore23_preferred_over_legacy_time_per_event():
     ).jobs[0]
     assert job.n_events == 40
     assert job.estimates.walltime == 80.0
-    assert job.expected_hs23_s == 800.0
+    assert job.estimates.expected_hs23_s == 800.0
 
 
 def test_partial_hepscore23_rates_rejected():

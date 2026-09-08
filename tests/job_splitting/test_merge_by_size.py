@@ -198,7 +198,7 @@ def test_estimates_use_optional_rates():
     assert job.estimates.persisted_output == 5.0
     assert job.estimates.scratch_disk == 5.0  # persisted only
     assert job.estimates.network == 10.0
-    assert job.expected_hs23_s is None
+    assert job.estimates.expected_hs23_s is None
 
 
 def test_hepscore23_walltime_and_expected_work():
@@ -226,7 +226,7 @@ def test_hepscore23_walltime_and_expected_work():
     assert job.input_lfns == ("/store/a.root", "/store/b.root")
     assert job.n_events == 8
     assert job.estimates.walltime == 16.0
-    assert job.expected_hs23_s == 160.0  # 8 × 20
+    assert job.estimates.expected_hs23_s == 160.0  # 8 × 20
     assert job.estimates.network == 100.0
     assert job.estimates.persisted_output == 8.0
     assert job.estimates.scratch_disk == 8.0

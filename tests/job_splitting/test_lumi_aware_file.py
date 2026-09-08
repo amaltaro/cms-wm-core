@@ -249,5 +249,5 @@ def test_hepscore23_walltime_and_expected_work_on_shared_lumi_component():
     assert jobs[0].input_lfns == ("/store/a.root", "/store/b.root")
     assert jobs[0].n_events == 8
     assert jobs[0].estimates.walltime == 16.0
-    assert jobs[0].expected_hs23_s == 160.0  # 8 × 20
+    assert jobs[0].estimates.expected_hs23_s == 160.0  # 8 × 20
     assert jobs[0].estimates.network == 80.0
