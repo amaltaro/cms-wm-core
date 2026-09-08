@@ -97,16 +97,13 @@ trace around ``split`` themselves.
 
 ### HEPScore23-normalized packing
 
-Wall-clock ``time_per_event`` assumes an implicit machine class. The intended
-redesign uses **HEPScore23·s per event** plus a **baseline HS23/core**, while
-keeping ``target_job_walltime`` (e.g. ~12 h on that baseline).
+Packing uses **HEPScore23·s per event** plus a **baseline HS23/core**, with
+``target_job_walltime`` (e.g. ~12 h on that baseline). Opaque wall-clock
+``time_per_event`` has been removed.
 
 Full design (definitions, 1-core vs N-core, walltime bridge, packing formulas,
 completed-job accounting, PanDA/DiracX notes):
 [hepscore23.md](hepscore23.md).
 
-**Status:** shared helpers + all v1 splitters
-([EventBased](event-based.md), [FileBased](file-based.md),
-[LumiAwareFile](lumi-aware-file.md), [MergeBySize](merge-by-size.md),
-[EventAwareLumi](event-aware-lumi.md)). Defer site averages, ``ε``, and
-match-time rescaling until there is a clear caller need.
+**Status:** implemented for all v1 splitters. Remaining work is multi-core
+``ε``, site averages, and match-time rescaling when callers need them.

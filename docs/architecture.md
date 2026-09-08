@@ -206,7 +206,8 @@ No required Rucio container/dataset fields on the core input.
 - Packing targets relevant to that algorithm (`files_per_job`,
   `events_per_job`, `lumis_per_job`, …)
 - Boundary flags, lumi mask, `fileset_closed`, … as needed by that algorithm
-- **Performance rates**: `time_per_event`, `input_size_per_event` (or derive),
+- **Performance rates**: `hepscore23_s_per_event`,
+  `baseline_hs23_per_core`, `input_size_per_event` (or derive),
   `transient_output_size_per_event`, `persisted_output_size_per_event`
 - **Resource targets** (soft close): `target_job_walltime`, `target_job_disk`
 - **Resource maxima** (hard ceiling / unsplittable flag):

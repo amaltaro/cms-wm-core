@@ -19,8 +19,9 @@ FileBased packs whole files into jobs. It is the first algorithm to extract.
   can be computed (`n_events × rates`)
 - Optional **resource targets/maxima** and size/time rates — same shared
   budget model as the rest of this design. Walltime uses HEPScore23 when
-  both `hepscore23_s_per_event` and `baseline_hs23_per_core` are set,
-  otherwise legacy `time_per_event` (see [HEPScore23](hepscore23.md))
+  both `hepscore23_s_per_event` and `baseline_hs23_per_core` are set
+  (see [HEPScore23](hepscore23.md)); both may be left at 0 when walltime
+  estimates are not needed
 
 ### Explicitly out of scope for FileBased
 

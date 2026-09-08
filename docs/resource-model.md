@@ -35,7 +35,7 @@ layers of information:
 | Concern | Estimate (sketch) | Target (soft) | Maximum (hard) |
 | --- | --- | --- | --- |
 | Wall-clock time | `n_events × wall_s_per_event`
-  (HS23 pair or legacy `time_per_event`; see
+  (`hepscore23_s_per_event / baseline_hs23_per_core`; see
   [hepscore23.md](hepscore23.md)) | `target_job_walltime` | `max_job_walltime` |
 | Scratch disk | see disk components below | `target_job_disk` | `max_job_disk` |
 
@@ -106,7 +106,8 @@ and scratch remain the primary resource close drivers.
 
 | Input | Meaning | Owner |
 | --- | --- | --- |
-| `time_per_event` | Average processing time per event | Caller (task / campaign performance) |
+| `hepscore23_s_per_event` | Normalized CPU work per event (HS23·s) | Caller (calibration) |
+| `baseline_hs23_per_core` | Baseline power for packing walltime | Caller (campaign / VO) |
 | `input_size_per_event` | Average input bytes per event | Caller and/or derived from file size/events |
 | `transient_output_size_per_event` | Intermediate scratch bytes per event | Caller |
 | `persisted_output_size_per_event` | Stage-out bytes per event (also on scratch while running) | Caller |

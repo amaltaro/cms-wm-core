@@ -41,14 +41,12 @@ integer:
 
 ```text
 wall_s_per_event =
-  hepscore23_s_per_event / baseline_hs23_per_core   # when both > 0
-  else time_per_event                                 # legacy
+  hepscore23_s_per_event / baseline_hs23_per_core
 
 events_per_job = floor(target_job_walltime / wall_s_per_event)
 ```
 
-Prefer HEPScore23 when both rate fields are set; otherwise require
-`time_per_event > 0`. Always require `target_job_walltime > 0` and
+Require both HS23 rate fields `> 0`, `target_job_walltime > 0`, and
 `events_per_job >= 1`. Partial HS23 config (only one of the two fields)
 is rejected. See [HEPScore23](hepscore23.md).
 
@@ -71,8 +69,8 @@ is rejected. See [HEPScore23](hepscore23.md).
 | --- | --- |
 | `total_events` | Events to generate in this request/slice |
 | `target_job_walltime` | Soft packing goal; drives `events_per_job` |
-| `ResourceRates` timing | HS23 pair (`hepscore23_s_per_event` +
-  `baseline_hs23_per_core`) **or** legacy `time_per_event` |
+| `ResourceRates` timing | `hepscore23_s_per_event` +
+  `baseline_hs23_per_core` (both required, `> 0`) |
 | Output size rates | Scratch / stage-out estimates |
 | `first_event` | Event-range start (default `1`) |
 | `first_lumi` | First job lumi id (default `1`) |
@@ -88,9 +86,8 @@ Each job carries:
 - empty `input_lfns`
 - `first_event` + `n_events` (half-open range)
 - `lumi` (unique integer for that job)
-- `ResourceEstimates` for `n_events` (including `expected_hs23_s` when
-  packed with HEPScore23 rates:
-  `n_events × hepscore23_s_per_event`; else `None`)
+- `ResourceEstimates` for `n_events` (including
+  `expected_hs23_s = n_events × hepscore23_s_per_event`)
 
 Deterministic: increasing events and lumis with no gaps/overlaps in the slice.
 

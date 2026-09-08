@@ -1,8 +1,8 @@
 # HEPScore23 and job sizing
 
-Design notes for moving cms-wm-core packing from opaque wall-clock
-``time_per_event`` to **HEPScore23·seconds per event**, while still targeting
-a wall-clock job duration (CMS often aims for ~12 h).
+Design notes for **HEPScore23·seconds per event** packing while still
+targeting a wall-clock job duration (CMS often aims for ~12 h). Opaque
+wall-clock ``time_per_event`` was removed; timing is HS23-only.
 
 Part of the [job-splitting design](README.md). Helpers live in
 ``job_splitting.hepscore``. All v1 splitters use them for walltime estimates
@@ -130,13 +130,15 @@ wall_s_per_event =
   hepscore23_s_per_event / (N_cores × hs23_per_core × ε)
 ```
 
-Today’s opaque ``time_per_event`` is this quantity on an **implicit** machine.
-The redesign makes the machine explicit:
+Today’s packing uses this quantity on an **explicit** baseline:
 
 ```text
-time_per_event_baseline =
+wall_s_per_event_baseline =
   hepscore23_s_per_event / (N_cores × baseline_hs23_per_core × ε)
 ```
+
+(Historical note: an opaque wall-clock ``time_per_event`` used to stand in
+for this on an implicit machine; that field has been removed.)
 
 ## Events per job and target wallclock time
 
@@ -232,16 +234,10 @@ corepower moving to HS23/core after WLCG adoption).
 | Piece | Status |
 | --- | --- |
 | ``ResourceRates.hepscore23_s_per_event`` /
-  ``baseline_hs23_per_core`` | Done |
+  ``baseline_hs23_per_core`` | Done (``time_per_event`` removed) |
 | ``wall_seconds_per_event`` / ``get_expected_hs23_s`` helpers | Done |
 | ``ResourceEstimates.expected_hs23_s`` | Done |
-| [EventBased](event-based.md) packing via HS23 or legacy | Done |
-| [FileBased](file-based.md) estimates / closes / ``expected_hs23_s`` | Done
-  (via ``file_common``) |
-| [LumiAwareFile](lumi-aware-file.md) | Done (same ``file_common`` path) |
-| [MergeBySize](merge-by-size.md) | Done (estimates / ``expected_hs23_s``
-  via ``file_common``; packing remains size-based) |
-| [EventAwareLumi](event-aware-lumi.md) packing via HS23 or legacy | Done |
+| All v1 splitters (HS23-only packing / estimates) | Done |
 | Multi-core ``ε``, site HS23, match-time rescaling | Deferred |
 
 First cut keeps 1-core, ``ε = 1``, baseline-only packing.
