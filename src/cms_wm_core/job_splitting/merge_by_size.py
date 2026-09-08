@@ -15,9 +15,12 @@ A single file larger than ``max`` becomes a normal one-file merge job (not
 unsplittable). Merge has no scratch-only (transient) product — output is
 persisted to shared storage — so estimates force
 ``transient_output_size_per_event=0``; scratch still includes persisted
-bytes. v1 leftover policy: every started job is emitted after the full scan
-(complete pre-scoped requests). Location bucketing, run/lumi merge order,
-and event masks are omitted; see ``docs/merge-by-size.md``.
+bytes. Optional walltime estimates use HEPScore23 rates when set (via shared
+``file_common``; see ``docs/hepscore23.md``), else legacy ``time_per_event``;
+packing itself remains size-based. v1 leftover policy: every started job is
+emitted after the full scan (complete pre-scoped requests). Location
+bucketing, run/lumi merge order, and event masks are omitted; see
+``docs/merge-by-size.md``.
 """
 
 from __future__ import annotations
