@@ -7,12 +7,15 @@ WMCore ``EventAwareLumiBased`` (production) and ``EventAwareLumiByWork``
 * https://github.com/dmwm/WMCore/blob/master/src/python/WMCore/JobSplitting/EventAwareLumiBased.py
 * https://github.com/dmwm/WMCore/blob/master/src/python/WMCore/JobSplitting/EventAwareLumiByWork.py
 
-``events_per_job = floor(target_job_walltime / time_per_event)``. Within each
-file, per-lumi ``events`` must be uniformly ``int`` (used directly) or
-uniformly ``None`` (each lumi weighted ``round(file.events / n_lumis)``).
-Mixed known/legacy event count metadata in one file is rejected. Jobs
-accumulate one or more lumis. Packing closes before the next lumi when adding
-it would not get closer to the event target (ByWork closest-to-target rule).
+``events_per_job = floor(target_job_walltime / wall_s_per_event)``, where
+``wall_s_per_event`` comes from HEPScore23 rates when set
+(``hepscore23_s_per_event / baseline_hs23_per_core``), else legacy
+``time_per_event`` (see ``docs/hepscore23.md``). Within each file, per-lumi
+``events`` must be uniformly ``int`` (used directly) or uniformly ``None``
+(each lumi weighted ``round(file.events / n_lumis)``). Mixed known/legacy
+event count metadata in one file is rejected. Jobs accumulate one or more
+lumis. Packing closes before the next lumi when adding it would not get
+closer to the event target (ByWork closest-to-target rule).
 
 Each ``(run, lumi)`` must appear in exactly one input file. Workflows that
 share the same run/lumi across files must use :class:`LumiAwareFileSplitter`
@@ -33,6 +36,10 @@ from cms_wm_core.job_splitting.file_common import (
     estimates_for_events,
     exceeds_maximum,
     validate_file_basics,
+)
+from cms_wm_core.job_splitting.hepscore import (
+    get_expected_hs23_s,
+    wall_seconds_per_event,
 )
 from cms_wm_core.job_splitting.types import (
     ResourceBudgets,
@@ -228,6 +235,10 @@ class EventAwareLumiSplitter(JobSplitter[EventAwareLumiRequest]):
                 estimates=estimates,
                 n_events=state.events_in_job,
                 run_lumi_mask=_compact_mask(state.current_lumis),
+                expected_hs23_s=get_expected_hs23_s(
+                    state.events_in_job,
+                    state.rates,
+                ),
                 unsplittable=unsplittable,
                 unsplittable_reason=reason,
             )
@@ -259,10 +270,8 @@ class EventAwareLumiSplitter(JobSplitter[EventAwareLumiRequest]):
             validate_file_basics(file_)
             _validate_run_lumi_events(file_)
 
-        target = events_per_job(
-            request.target_job_walltime,
-            request.rates.time_per_event,
-        )
+        wall_s = wall_seconds_per_event(request.rates, require=True)
+        target = events_per_job(request.target_job_walltime, wall_s)
         work_units = _build_work_units(request.files)
         state = _PackState(
             rates=request.rates,
