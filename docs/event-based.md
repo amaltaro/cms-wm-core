@@ -88,9 +88,9 @@ Each job carries:
 - empty `input_lfns`
 - `first_event` + `n_events` (half-open range)
 - `lumi` (unique integer for that job)
-- `ResourceEstimates` for `n_events`
-- `expected_hs23_s` when packed with HEPScore23 rates
-  (`n_events × hepscore23_s_per_event`); else `None`
+- `ResourceEstimates` for `n_events` (including `expected_hs23_s` when
+  packed with HEPScore23 rates:
+  `n_events × hepscore23_s_per_event`; else `None`)
 
 Deterministic: increasing events and lumis with no gaps/overlaps in the slice.
 

@@ -157,7 +157,7 @@ lumi cannot fit).
 
 Events are a **sizing** signal; the **assigned work** is always a set of
 `(run, lumi)` pairs (and the files that contain them). When packed with
-HEPScore23 rates, each job sets ``expected_hs23_s`` to
+HEPScore23 rates, each job sets ``estimates.expected_hs23_s`` to
 ``n_events × hepscore23_s_per_event``; otherwise ``None``.
 
 ### Packing modes

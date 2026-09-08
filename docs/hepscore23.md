@@ -202,8 +202,9 @@ consumed_hs23_s ≈
 
 For cms-wm-core / upper layers:
 
-1. At pack time, record **expected work**
-   ``n_events × hepscore23_s_per_event`` (baseline frame)
+1. At pack time, record **expected work** on
+   ``ResourceEstimates.expected_hs23_s``
+   (``n_events × hepscore23_s_per_event``, baseline frame)
 2. At completion, the WMS (or site accounting) records **consumed** HS23·s
    from actual walltime × cores × site HS23/core
 3. Compare expected vs consumed for monitoring; do not require the splitter
@@ -233,7 +234,7 @@ corepower moving to HS23/core after WLCG adoption).
 | ``ResourceRates.hepscore23_s_per_event`` /
   ``baseline_hs23_per_core`` | Done |
 | ``wall_seconds_per_event`` / ``get_expected_hs23_s`` helpers | Done |
-| ``SplitJob.expected_hs23_s`` | Done |
+| ``ResourceEstimates.expected_hs23_s`` | Done |
 | [EventBased](event-based.md) packing via HS23 or legacy | Done |
 | [FileBased](file-based.md) estimates / closes / ``expected_hs23_s`` | Done
   (via ``file_common``) |

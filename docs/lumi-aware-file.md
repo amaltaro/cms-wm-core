@@ -32,7 +32,7 @@ Same as FileBased otherwise:
   (shared ``file_common``; see [HEPScore23](hepscore23.md))
 - Estimates use file-level ``events`` and ``size``; jobs set ``n_events`` to
   that event sum
-- When packed with HEPScore23 rates, ``expected_hs23_s`` is
+- When packed with HEPScore23 rates, ``estimates.expected_hs23_s`` is
   ``n_events × hepscore23_s_per_event``; otherwise ``None``
 - Input ``network`` is the sum of assigned file ``size`` (whole files)
 - Deterministic: components ordered by minimum LFN; LFNs sorted within a job

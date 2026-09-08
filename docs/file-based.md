@@ -43,6 +43,6 @@ network estimate). `run_lumis` is ignored if present.
 **Output:** ordered ``SplitResult.jobs`` (LFN-sorted packing). Each job sets
 ``n_events`` to the sum of assigned file-level ``events`` (same total used for
 resource estimates). Input ``network`` is the sum of assigned file ``size``
-values. When packed with HEPScore23 rates, ``expected_hs23_s`` is
+values. When packed with HEPScore23 rates, ``estimates.expected_hs23_s`` is
 ``n_events × hepscore23_s_per_event``; otherwise ``None``. Deterministic for
 the same input.

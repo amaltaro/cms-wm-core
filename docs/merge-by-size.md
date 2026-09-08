@@ -126,7 +126,7 @@ Merge jobs are I/O-heavy. Proposed v1:
 - **`persisted_output` / scratch / walltime**: from optional rates ×
   `n_events` when provided (otherwise zeros). Scratch therefore equals
   persisted for merge jobs (`0 + persisted`), not zero disk.
-- **Walltime / `expected_hs23_s`**: optional. Prefer HEPScore23 when both
+- **Walltime / `estimates.expected_hs23_s`**: optional. Prefer HEPScore23 when both
   `hepscore23_s_per_event` and `baseline_hs23_per_core` are set; otherwise
   legacy `time_per_event` (shared ``file_common``; see
   [HEPScore23](hepscore23.md)). Packing stays size-based either way.
