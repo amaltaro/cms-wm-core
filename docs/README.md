@@ -12,7 +12,7 @@ Code lives under `src/cms_wm_core/job_splitting/`.
 
 | Document | Contents |
 | --- | --- |
-| [architecture.md](architecture.md) | CMS data model, invariants, types, module layout, I/O contract |
+| [architecture.md](architecture.md) | CMS data model, invariants, types, I/O diagrams, module layout |
 | [resource-model.md](resource-model.md) | Rates, targets, maxima, packing close rules |
 | [hepscore23.md](hepscore23.md) | HEPScore23·s/event packing and accounting (design) |
 | [future-work.md](future-work.md) | Extract roadmap and cross-cutting TODOs |

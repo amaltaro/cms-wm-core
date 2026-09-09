@@ -181,12 +181,91 @@ Under `src/cms_wm_core/job_splitting/`:
 `typing.Protocol` / duck typing is intentionally avoided so each field has an
 explicit dataclass type.
 
-## Input / output contract (sketch)
+## Input / output contract
 
 **Each algorithm may require a different subset of inputs.** Shared types in
-`types.py` are a vocabulary; each algorithm adds a request dataclass.
-Callers must not assume FileBased and EventAwareLumiBased consume the same
-request.
+`types.py` are a vocabulary; each algorithm declares its own `*Request`
+dataclass. Callers must not assume FileBased and EventAwareLumi consume the
+same request.
+
+The splitter itself is a **black box**: given one algorithm-specific request,
+it returns a deterministic `SplitResult`. Data discovery and placement, work
+persistence, and matchmaking stay outside.
+
+```mermaid
+flowchart LR
+  subgraph inputs [Caller-prepared input]
+    files[SplitFile list<br/>optional]
+    rates[ResourceRates]
+    budgets[ResourceBudgets]
+    knobs[Algorithm knobs<br/>files_per_job, size band, …]
+  end
+
+  req[AlgorithmRequest]
+  splitters[JobSplitter.split<br/>black box]
+  result[SplitResult]
+  jobs[SplitJob …]
+
+  files --> req
+  rates --> req
+  budgets --> req
+  knobs --> req
+  req --> splitters
+  splitters --> result
+  result --> jobs
+```
+
+### Shared type vocabulary (`types.py`)
+
+Composition of the dataclasses used across algorithms (not every field is
+required on every path):
+
+```mermaid
+flowchart TB
+  subgraph inputSide [Input-side types]
+    RLE[RunLumiEvents]
+    SF[SplitFile]
+    RR[ResourceRates]
+    RB[ResourceBudgets]
+    RLE -->|"0..N on run_lumis"| SF
+  end
+
+  subgraph requestSide [Per-algorithm request]
+    AR["*Request<br/>FileBasedRequest, EventBasedRequest, …"]
+    SF -.->|"usually"| AR
+    RR --> AR
+    RB --> AR
+  end
+
+  subgraph outputSide [Output-side types]
+    RE[ResourceEstimates]
+    RLR[RunLumiRange]
+    SJ[SplitJob]
+    SR[SplitResult]
+    RE -->|"estimates"| SJ
+    RLR -->|"0..N on run_lumi_mask"| SJ
+    SJ -->|"ordered jobs"| SR
+  end
+
+  AR -->|"split()"| SR
+```
+
+| Type | Role |
+| --- | --- |
+| `SplitFile` | One pre-resolved input file (`lfn`, `events`, `size`, optional `run_lumis`) |
+| `RunLumiEvents` | One `(run, lumi, events?)` on a file |
+| `ResourceRates` | How cost scales with events (HS23 work + baseline, size rates) |
+| `ResourceBudgets` | Soft targets and hard maxima for closing / unsplittable |
+| `*Request` | Algorithm-specific bundle of files/knobs + rates + budgets |
+| `SplitResult` | Ordered sequence of jobs |
+| `SplitJob` | One job: LFNs and/or event-range/mask fields + estimates |
+| `ResourceEstimates` | Estimated walltime, disk, network, expected HS23·s |
+| `RunLumiRange` | Compact inclusive lumi mask entry on a job |
+
+No-input EventBased omits `SplitFile` and fills `first_event` / `n_events` /
+`lumi` on each `SplitJob` instead. EventAwareLumi fills `run_lumi_mask`.
+Per-algorithm request/output diagrams can live on each algorithm page when
+those special fields need emphasis.
 
 ### Input — file (common fields; algorithms vary)
 
@@ -204,7 +283,7 @@ No required Rucio container/dataset fields on the core input.
 
 - Algorithm identity (e.g. file-based, event-based)
 - Packing targets relevant to that algorithm (`files_per_job`,
-  `events_per_job`, `lumis_per_job`, …)
+  size band, derived `events_per_job`, …)
 - Boundary flags, lumi mask, `fileset_closed`, … as needed by that algorithm
 - **Performance rates**: `hepscore23_s_per_event`,
   `baseline_hs23_per_core`, `input_size_per_event` (or derive),
@@ -223,12 +302,7 @@ No required Rucio container/dataset fields on the core input.
   - scratch disk (transient + persisted; ± TBD input staging)
   - persisted / stage-out volume (subset of scratch)
   - network (**input** read volume only; see [resource-model](resource-model.md#network-estimate))
+  - expected HS23·s when rates are set
 - optional creation-failure / unsplittable marker and reason
-- small baggage dict if needed
 
 No memory estimate from the splitter.
-
-## Diagrams (planned)
-
-Mermaid diagrams for caller → splitter → jobs flow, type relationships, and
-the packing loop will be added here.
