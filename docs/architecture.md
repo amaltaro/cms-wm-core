@@ -269,10 +269,12 @@ those special fields need emphasis.
 
 ### Input — file (common fields; algorithms vary)
 
-Typical fields (not all required for every algorithm):
+Fields available in the `SplitFile` object and typically used (not all required for every algorithm):
 
 - `lfn`, `events`, `size`
-- `first_event` (unused in v1; reserved for a future input-file EventBased)
+- `first_event` — unused in v1; reserved for a future
+  **input-file** EventBased (today’s no-input EventBased uses
+  `EventBasedRequest.first_event` / `SplitJob.first_event` instead)
 - `run_lumis`: list of `(run, lumi, events)` — can be very large; omit when
   unused
 - optional `parents` (LFNs already attached)
@@ -281,28 +283,45 @@ No required Rucio container/dataset fields on the core input.
 
 ### Input — request (common fields; algorithms vary)
 
-- Algorithm identity (e.g. file-based, event-based)
-- Packing targets relevant to that algorithm (`files_per_job`,
-  size band, derived `events_per_job`, …)
-- Boundary flags, lumi mask, `fileset_closed`, … as needed by that algorithm
-- **Performance rates**: `hepscore23_s_per_event`,
+Each algorithm declares its own ``*Request`` dataclass (e.g.
+``FileBasedRequest``, ``EventBasedRequest``). Shared pieces are usually
+nested as ``rates: ResourceRates`` and ``budgets: ResourceBudgets`` (or
+passed beside algorithm-specific knobs on that request).
+
+Typical contents:
+
+- Algorithm identity (via the splitter / request type, e.g. file-based,
+  event-based)
+- Packing knobs on the ``*Request`` (`files_per_job`, size band,
+  `target_job_walltime` where sizing is walltime-driven, …)
+- Boundary flags, lumi allow-list, `fileset_closed`, … as needed by that
+  algorithm (on the request when implemented)
+- **Performance rates** (`ResourceRates`): `hepscore23_s_per_event`,
   `baseline_hs23_per_core`, `input_size_per_event` (or derive),
   `transient_output_size_per_event`, `persisted_output_size_per_event`
-- **Resource targets** (soft close): `target_job_walltime`, `target_job_disk`
-- **Resource maxima** (hard ceiling / unsplittable flag):
+- **Resource targets** (`ResourceBudgets`, soft close):
+  `target_job_walltime`, `target_job_disk`
+- **Resource maxima** (`ResourceBudgets`, hard ceiling / unsplittable):
   `max_job_walltime`, `max_job_disk`
 - Precomputed whitelists/masks as data only (no URLs or DB handles)
 
 ### Output
 
-- Ordered jobs (deterministic for the given inputs); stored as an immutable
-  tuple on ``SplitResult.jobs``
-- Each job: ordered input LFNs, mask (when applicable), **resource estimates**:
+Carrier types: ``SplitResult`` holds an ordered ``jobs`` tuple of
+``SplitJob``. Cost figures live on ``SplitJob.estimates``
+(``ResourceEstimates``).
+
+- Ordered jobs (deterministic for the given inputs) on
+  ``SplitResult.jobs``
+- Each ``SplitJob``: ordered input LFNs, mask / event-range fields when
+  applicable, **resource estimates**:
   - wall time
   - scratch disk (transient + persisted; ± TBD input staging)
   - persisted / stage-out volume (subset of scratch)
-  - network (**input** read volume only; see [resource-model](resource-model.md#network-estimate))
+  - network (**input** read volume only; see
+    [resource-model](resource-model.md#network-estimate))
   - expected HS23·s when rates are set
-- optional creation-failure / unsplittable marker and reason
+- optional creation-failure / unsplittable marker and reason on
+  ``SplitJob``
 
 No memory estimate from the splitter.
