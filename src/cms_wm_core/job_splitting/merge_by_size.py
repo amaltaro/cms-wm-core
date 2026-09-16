@@ -88,13 +88,13 @@ class MergeBySizeSplitter(JobSplitter[MergeBySizeRequest]):
         max_size = request.max_output_size_bytes
 
         while remaining:
-            seed = remaining.pop(0)
-            if seed.size > max_size:
-                jobs.append(make_job([seed], rates))
+            first_file = remaining.pop(0)
+            if first_file.size > max_size:
+                jobs.append(make_job([first_file], rates))
                 continue
 
-            current = [seed]
-            accum = seed.size
+            current = [first_file]
+            accum = first_file.size
             index = 0
             while index < len(remaining):
                 candidate = remaining[index]
