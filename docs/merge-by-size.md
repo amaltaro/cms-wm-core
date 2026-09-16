@@ -15,7 +15,7 @@ files must be merged into fewer, larger files for efficient storage and
 downstream processing.
 
 Implemented in ``merge_by_size.py`` (v1). Leftover policy for v1 is
-**always flush** (every seeded job is emitted after a full remainder scan).
+**always flush** (every started job is emitted after a full remainder scan).
 Packing uses size-descending order and rescans remaining files to fill toward
 ``max``; ``min`` defines the desired band and is validated on the request.
 
@@ -62,12 +62,12 @@ splitter.
 **alone as a normal merge job** (not `unsplittable`), so the already-processed
 file still gets a merge attempt.
 
-**Order / fill:** sort by **`(-size, lfn)`** (largest first). Each job is
-seeded with the next remaining file; the packer then scans **all** remaining
-files and adds every candidate that still fits under ``max``. That costs
-``O(n^2)`` but fills closer to the ceiling and mixes large seeds with smaller
-files that fit in the slack. Close the job only after that full scan (or when
-the seed alone is oversize).
+**Order / fill:** sort by **`(-size, lfn)`** (largest first). Each job starts
+with the next remaining file; the packer then scans **all** remaining files
+and adds every candidate that still fits under ``max``. That costs
+``O(n^2)`` but fills closer to the ceiling and mixes large starters with
+smaller files that fit in the slack. Close the job only after that full scan
+(or when the first file alone is oversize).
 
 ### Packing rule (fill toward max)
 
@@ -76,11 +76,11 @@ require min_output_size_bytes <= max_output_size_bytes
 
 remaining = sorted(files, key=(-size, lfn))
 while remaining:
-    seed = remaining.pop(0)
-    if seed.size > max_output_size_bytes:
-        emit job([seed])   # alone; oversize — see open note
+    first_file = remaining.pop(0)
+    if first_file.size > max_output_size_bytes:
+        emit job([first_file])   # alone; oversize — see open note
         continue
-    current, accum = [seed], seed.size
+    current, accum = [first_file], first_file.size
     for each candidate still in remaining (in order):
         if accum + candidate.size <= max_output_size_bytes:
             move candidate into current; accum += candidate.size
@@ -88,8 +88,8 @@ while remaining:
 ```
 
 Unlike next-fit (close when the immediate next file does not fit), this
-rescans the whole remainder so a large seed can still pick up later small
-files that fit in the slack. Multi-file jobs always satisfy
+rescans the whole remainder so a large first file can still pick up later
+small files that fit in the slack. Multi-file jobs always satisfy
 ``accum <= max_output_size_bytes``. A lone oversize file is the intentional
 exception to the ceiling.
 
